@@ -341,6 +341,6 @@ This SDK is released under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Support
 
-- Documentation: [https://docs.huefy.com](https://docs.huefy.com)
+- Documentation: [https://docs.huefy.dev](https://docs.huefy.dev)
 - Issues: [GitHub Issues](https://github.com/teracrafts/huefy-sdk/issues)
-- Email: support@huefy.com
+- Email: support@huefy.dev

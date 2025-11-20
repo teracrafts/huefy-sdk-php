@@ -37,16 +37,21 @@ use InvalidArgumentException;
  */
 class HuefyConfig
 {
+    public const TRANSPORT_KERNEL = 'kernel';
+    public const TRANSPORT_HTTP = 'http';
+
     private const DEFAULT_PROXY_URL = 'http://localhost:8080/huefy-proxy';
-    private const DEFAULT_BASE_URL = 'https://api.huefy.dev';
+    private const DEFAULT_BASE_URL = 'https://api.huefy.dev/api/v1/sdk';
     private const DEFAULT_TIMEOUT = 30.0;
     private const DEFAULT_CONNECT_TIMEOUT = 10.0;
+    private const DEFAULT_TRANSPORT = self::TRANSPORT_KERNEL;
 
     private ?string $proxyUrl;
     private string $baseUrl;
     private float $timeout;
     private float $connectTimeout;
     private RetryConfig $retryConfig;
+    private string $transport;
 
     /**
      * Create a new Huefy configuration.
@@ -63,13 +68,15 @@ class HuefyConfig
         string $baseUrl = self::DEFAULT_BASE_URL,
         float $timeout = self::DEFAULT_TIMEOUT,
         float $connectTimeout = self::DEFAULT_CONNECT_TIMEOUT,
-        ?RetryConfig $retryConfig = null
+        ?RetryConfig $retryConfig = null,
+        string $transport = self::DEFAULT_TRANSPORT
     ) {
         $this->proxyUrl = $proxyUrl;
         $this->setBaseUrl($baseUrl);
         $this->setTimeout($timeout);
         $this->setConnectTimeout($connectTimeout);
         $this->retryConfig = $retryConfig ?? new RetryConfig();
+        $this->setTransport($transport);
     }
 
     /**
@@ -202,5 +209,54 @@ class HuefyConfig
             connectTimeout: $connectTimeout,
             retryConfig: RetryConfig::disabled()
         );
+    }
+
+    /**
+     * Get the transport mode.
+     *
+     * @return string 'kernel' or 'http'
+     */
+    public function getTransport(): string
+    {
+        return $this->transport;
+    }
+
+    /**
+     * Set the transport mode.
+     *
+     * @param string $transport 'kernel' or 'http'
+     *
+     * @throws InvalidArgumentException If transport is invalid
+     */
+    public function setTransport(string $transport): void
+    {
+        $valid = [self::TRANSPORT_KERNEL, self::TRANSPORT_HTTP];
+        if (!in_array($transport, $valid, true)) {
+            throw new InvalidArgumentException(
+                sprintf('Transport must be one of: %s', implode(', ', $valid))
+            );
+        }
+
+        $this->transport = $transport;
+    }
+
+    /**
+     * Check if using kernel transport.
+     *
+     * @return bool
+     */
+    public function isKernelTransport(): bool
+    {
+        return $this->transport === self::TRANSPORT_KERNEL;
+    }
+
+    /**
+     * Check if using HTTP transport.
+     *
+     * @return bool
+     */
+    public function isHttpTransport(): bool
+    {
+        return $this->transport === self::TRANSPORT_HTTP;
     }
 }
