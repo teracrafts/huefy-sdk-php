@@ -185,15 +185,7 @@ class KernelClient
      */
     private function determineEndpoint(HuefyConfig $config): string
     {
-        // Check if a custom base URL is configured
-        $baseUrl = $config->getBaseUrl();
-        if ($baseUrl && $baseUrl !== 'https://api.huefy.dev/api/v1/sdk') {
-            return $baseUrl;
-        }
-
-        // Default endpoints for gRPC
-        $isProduction = getenv('APP_ENV') === 'production' || getenv('NODE_ENV') === 'production';
-        return $isProduction ? 'api.huefy.dev:50051' : 'localhost:50051';
+        return $config->getGrpcEndpoint();
     }
 
     /**

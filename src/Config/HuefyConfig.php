@@ -40,81 +40,99 @@ class HuefyConfig
     public const TRANSPORT_KERNEL = 'kernel';
     public const TRANSPORT_HTTP = 'http';
 
-    private const DEFAULT_PROXY_URL = 'http://localhost:8080/huefy-proxy';
-    private const DEFAULT_BASE_URL = 'https://api.huefy.dev/api/v1/sdk';
+    // Production endpoints (default)
+    private const PRODUCTION_GRPC_ENDPOINT = 'api.huefy.dev:50051';
+    private const PRODUCTION_HTTP_ENDPOINT = 'https://api.huefy.dev/api/v1/sdk';
+
+    // Local development endpoints
+    private const LOCAL_GRPC_ENDPOINT = 'localhost:50051';
+    private const LOCAL_HTTP_ENDPOINT = 'http://localhost:8080/api/v1/sdk';
+
     private const DEFAULT_TIMEOUT = 30.0;
     private const DEFAULT_CONNECT_TIMEOUT = 10.0;
     private const DEFAULT_TRANSPORT = self::TRANSPORT_KERNEL;
 
-    private ?string $proxyUrl;
-    private string $baseUrl;
+    private ?string $baseUrl;
     private float $timeout;
     private float $connectTimeout;
     private RetryConfig $retryConfig;
     private string $transport;
+    private bool $local;
 
     /**
      * Create a new Huefy configuration.
      *
-     * @param string $baseUrl Base URL for the Huefy API
+     * @param string|null $baseUrl Custom endpoint (overrides local setting)
      * @param float $timeout Request timeout in seconds
      * @param float $connectTimeout Connection timeout in seconds
      * @param RetryConfig|null $retryConfig Retry configuration
+     * @param string $transport Transport mode ('kernel' or 'http')
+     * @param bool $local Use local development endpoints (default: false, uses production)
      *
      * @throws InvalidArgumentException If any parameter is invalid
      */
     public function __construct(
-        ?string $proxyUrl = self::DEFAULT_PROXY_URL,
-        string $baseUrl = self::DEFAULT_BASE_URL,
+        ?string $baseUrl = null,
         float $timeout = self::DEFAULT_TIMEOUT,
         float $connectTimeout = self::DEFAULT_CONNECT_TIMEOUT,
         ?RetryConfig $retryConfig = null,
-        string $transport = self::DEFAULT_TRANSPORT
+        string $transport = self::DEFAULT_TRANSPORT,
+        bool $local = false
     ) {
-        $this->proxyUrl = $proxyUrl;
-        $this->setBaseUrl($baseUrl);
+        $this->baseUrl = $baseUrl;
         $this->setTimeout($timeout);
         $this->setConnectTimeout($connectTimeout);
         $this->retryConfig = $retryConfig ?? new RetryConfig();
         $this->setTransport($transport);
+        $this->local = $local;
     }
 
     /**
-     * Get the proxy URL for optimized routing.
-     *
-     * @return string|null
-     */
-    public function getProxyUrl(): ?string
-    {
-        return $this->proxyUrl;
-    }
-
-    /**
-     * Get the base URL for the Huefy API.
+     * Get the gRPC endpoint for kernel transport.
      *
      * @return string
      */
-    public function getBaseUrl(): string
+    public function getGrpcEndpoint(): string
     {
-        return $this->baseUrl;
+        if ($this->baseUrl !== null) {
+            return $this->baseUrl;
+        }
+
+        return $this->local ? self::LOCAL_GRPC_ENDPOINT : self::PRODUCTION_GRPC_ENDPOINT;
     }
 
     /**
-     * Set the base URL for the Huefy API.
+     * Get the HTTP endpoint for direct API calls.
      *
-     * @param string $baseUrl
-     *
-     * @throws InvalidArgumentException If URL is empty
+     * @return string
      */
-    public function setBaseUrl(string $baseUrl): void
+    public function getHttpEndpoint(): string
     {
-        $trimmed = trim($baseUrl);
-        if (empty($trimmed)) {
-            throw new InvalidArgumentException('Base URL cannot be empty');
+        if ($this->baseUrl !== null) {
+            return $this->baseUrl;
         }
 
-        // Remove trailing slash for consistency
-        $this->baseUrl = rtrim($trimmed, '/');
+        return $this->local ? self::LOCAL_HTTP_ENDPOINT : self::PRODUCTION_HTTP_ENDPOINT;
+    }
+
+    /**
+     * Check if using local development endpoints.
+     *
+     * @return bool
+     */
+    public function isLocal(): bool
+    {
+        return $this->local;
+    }
+
+    /**
+     * Set custom base URL (overrides local setting).
+     *
+     * @param string|null $baseUrl
+     */
+    public function setBaseUrl(?string $baseUrl): void
+    {
+        $this->baseUrl = $baseUrl !== null ? rtrim(trim($baseUrl), '/') : null;
     }
 
     /**
@@ -192,22 +210,22 @@ class HuefyConfig
     /**
      * Create a configuration with retries disabled.
      *
-     * @param string $baseUrl Base URL for the Huefy API
      * @param float $timeout Request timeout in seconds
      * @param float $connectTimeout Connection timeout in seconds
+     * @param bool $local Use local development endpoints
      *
      * @return self
      */
     public static function withoutRetries(
-        string $baseUrl = self::DEFAULT_BASE_URL,
         float $timeout = self::DEFAULT_TIMEOUT,
-        float $connectTimeout = self::DEFAULT_CONNECT_TIMEOUT
+        float $connectTimeout = self::DEFAULT_CONNECT_TIMEOUT,
+        bool $local = false
     ): self {
         return new self(
-            baseUrl: $baseUrl,
             timeout: $timeout,
             connectTimeout: $connectTimeout,
-            retryConfig: RetryConfig::disabled()
+            retryConfig: RetryConfig::disabled(),
+            local: $local
         );
     }
 

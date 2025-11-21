@@ -57,11 +57,11 @@ class HttpClient
     }
 
     /**
-     * Get the base URL.
+     * Get the HTTP endpoint.
      */
     public function getEndpoint(): string
     {
-        return $this->config->getBaseUrl();
+        return $this->config->getHttpEndpoint();
     }
 
     /**
@@ -77,7 +77,7 @@ class HttpClient
      */
     private function makeRequest(string $method, string $endpoint, array $data = []): array
     {
-        $url = rtrim($this->config->getBaseUrl(), '/') . $endpoint;
+        $url = rtrim($this->config->getHttpEndpoint(), '/') . $endpoint;
         $options = [];
 
         if (!empty($data)) {
@@ -180,7 +180,7 @@ class HttpClient
     private function createHttpClient(): GuzzleClient
     {
         $config = [
-            'base_uri' => $this->config->getBaseUrl(),
+            'base_uri' => $this->config->getHttpEndpoint(),
             'timeout' => $this->config->getTimeout(),
             'connect_timeout' => $this->config->getConnectTimeout(),
             'headers' => [
