@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Huefy;
 
 use Huefy\Errors\HuefyException;
+use Huefy\Utils\Logger;
+use Huefy\Utils\NullLogger;
 
 /**
  * Configuration value object for the Huefy SDK.
@@ -25,6 +27,7 @@ class HuefyConfig
     public readonly ?string $secondaryApiKey;
     public readonly bool $enableRequestSigning;
     public readonly bool $enableErrorSanitization;
+    public readonly Logger $logger;
 
     /**
      * @param array<string, mixed> $config Configuration array with the following keys:
@@ -41,6 +44,7 @@ class HuefyConfig
      *   - secondaryApiKey (?string): Optional failover API key.
      *   - enableRequestSigning (bool): Enable HMAC signing. Defaults to false.
      *   - enableErrorSanitization (bool): Enable PII sanitization. Defaults to true.
+     *   - logger (?Logger): Logger instance. Defaults to NullLogger.
      *
      * @throws HuefyException If required configuration is missing or invalid.
      */
@@ -63,6 +67,7 @@ class HuefyConfig
         $this->secondaryApiKey = $config['secondaryApiKey'] ?? null;
         $this->enableRequestSigning = (bool) ($config['enableRequestSigning'] ?? false);
         $this->enableErrorSanitization = (bool) ($config['enableErrorSanitization'] ?? true);
+        $this->logger = $config['logger'] ?? new NullLogger();
 
         if ($this->timeout <= 0) {
             throw HuefyException::validationError('Timeout must be positive', 'timeout');
@@ -70,8 +75,20 @@ class HuefyConfig
         if ($this->maxRetries < 0) {
             throw HuefyException::validationError('maxRetries must be non-negative', 'maxRetries');
         }
+        if ($this->baseDelayMs <= 0) {
+            throw HuefyException::validationError('baseDelayMs must be positive', 'baseDelayMs');
+        }
         if ($this->maxDelayMs < $this->baseDelayMs) {
             throw HuefyException::validationError('maxDelayMs must be >= baseDelayMs', 'maxDelayMs');
+        }
+        if ($this->circuitBreakerResetMs <= 0) {
+            throw HuefyException::validationError('circuitBreakerResetMs must be positive', 'circuitBreakerResetMs');
+        }
+        if ($this->circuitBreakerThreshold < 1) {
+            throw HuefyException::validationError('circuitBreakerThreshold must be >= 1', 'circuitBreakerThreshold');
+        }
+        if ($this->circuitBreakerHalfOpenMax < 1) {
+            throw HuefyException::validationError('circuitBreakerHalfOpenMax must be >= 1', 'circuitBreakerHalfOpenMax');
         }
     }
 
