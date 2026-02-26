@@ -10,6 +10,7 @@ use GuzzleHttp\Exception\RequestException;
 use Huefy\Errors\ErrorSanitizer;
 use Huefy\Errors\HuefyException;
 use Huefy\HuefyConfig;
+use Huefy\Security\Security;
 use Huefy\Utils\Version;
 
 /**
@@ -118,8 +119,22 @@ class HttpClient
             ],
         ];
 
-        if ($body !== null) {
-            $options['json'] = $body;
+        $serializedBody = $body !== null ? json_encode($body) : null;
+
+        if ($serializedBody !== null) {
+            $options['headers']['Content-Type'] = 'application/json';
+            $options['body'] = $serializedBody;
+        }
+
+        if ($this->config->enableRequestSigning) {
+            $timestamp = (int) (microtime(true) * 1000);
+            $bodyForSigning = $serializedBody ?? '';
+            $message = "{$timestamp}.{$bodyForSigning}";
+            $signature = Security::hmacSign($message, $this->config->apiKey);
+
+            $options['headers']['X-Timestamp'] = (string) $timestamp;
+            $options['headers']['X-Signature'] = $signature;
+            $options['headers']['X-Key-Id'] = substr($this->config->apiKey, 0, 8);
         }
 
         try {
@@ -149,7 +164,23 @@ class HttpClient
             ? ErrorSanitizer::sanitize($bodyString)
             : $bodyString;
 
-        throw HuefyException::fromStatusCode($statusCode, $message);
+        $requestId = $response->getHeaderLine('X-Request-Id') ?: null;
+
+        $retryAfterMs = null;
+        $retryAfterHeader = $response->getHeaderLine('Retry-After');
+        if ($retryAfterHeader !== '') {
+            if (is_numeric($retryAfterHeader)) {
+                $retryAfterMs = (int) ((float) $retryAfterHeader * 1000);
+            } else {
+                $date = \DateTimeImmutable::createFromFormat(\DateTimeInterface::RFC7231, $retryAfterHeader);
+                if ($date !== false) {
+                    $delaySeconds = $date->getTimestamp() - time();
+                    $retryAfterMs = max(0, $delaySeconds * 1000);
+                }
+            }
+        }
+
+        throw HuefyException::fromStatusCode($statusCode, $message, $requestId, $retryAfterMs);
     }
 
     /**
