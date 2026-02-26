@@ -46,13 +46,16 @@ class Security
     /**
      * Generates an HMAC-SHA256 signature for request signing.
      *
-     * @return string Base64-encoded HMAC signature.
+     * @return string Hex-encoded HMAC signature.
      */
     public static function hmacSign(string $payload, string $secret): string
     {
-        $hash = hash_hmac(self::HMAC_ALGORITHM, $payload, $secret, true);
+        $hash = hash_hmac(self::HMAC_ALGORITHM, $payload, $secret);
+        if ($hash === false) {
+            throw new \RuntimeException('HMAC signature generation failed');
+        }
 
-        return base64_encode($hash);
+        return $hash;
     }
 
     /**
