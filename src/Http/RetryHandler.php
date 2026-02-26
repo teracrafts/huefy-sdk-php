@@ -68,16 +68,16 @@ class RetryHandler
 
     /**
      * Calculates the delay for a given attempt using exponential backoff
-     * with full jitter.
+     * with multiplicative ±25% jitter.
      *
-     * Formula: random(cappedDelay/2, min(maxDelay, baseDelay * 2^attempt))
+     * Formula: min(maxDelay, baseDelay * 2^attempt) * (0.75 + random * 0.5)
      */
     public function calculateDelay(int $attempt): int
     {
-        $exponentialDelay = $this->baseDelayMs * (1 << $attempt);
+        $exponentialDelay = $this->baseDelayMs * (1 << min($attempt, 30));
         $cappedDelay = min($exponentialDelay, $this->maxDelayMs);
-        $minDelay = (int) ($cappedDelay / 2);
+        $jitterFactor = 0.75 + (mt_rand() / mt_getrandmax()) * 0.5;
 
-        return random_int($minDelay, $cappedDelay);
+        return (int) ($cappedDelay * $jitterFactor);
     }
 }
