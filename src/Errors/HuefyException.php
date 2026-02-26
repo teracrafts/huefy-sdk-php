@@ -12,6 +12,7 @@ class HuefyException extends \RuntimeException
     private string $errorCode;
     private ?int $statusCode;
     private bool $recoverable;
+    private ?string $requestId;
     /** @var array<string, string> */
     private array $context;
 
@@ -20,6 +21,7 @@ class HuefyException extends \RuntimeException
      * @param string               $errorCode  Structured error code from ErrorCode.
      * @param ?int                  $statusCode HTTP status code, if applicable.
      * @param bool                  $recoverable Whether the error is potentially recoverable.
+     * @param ?string               $requestId  Request ID from X-Request-Id header.
      * @param array<string, string> $context    Additional error context.
      * @param ?\Throwable           $previous   Previous exception for chaining.
      */
@@ -28,6 +30,7 @@ class HuefyException extends \RuntimeException
         string $errorCode = ErrorCode::UNKNOWN_ERROR,
         ?int $statusCode = null,
         bool $recoverable = false,
+        ?string $requestId = null,
         array $context = [],
         ?\Throwable $previous = null,
     ) {
@@ -35,6 +38,7 @@ class HuefyException extends \RuntimeException
         $this->errorCode = $errorCode;
         $this->statusCode = $statusCode;
         $this->recoverable = $recoverable;
+        $this->requestId = $requestId;
         $this->context = $context;
     }
 
@@ -61,11 +65,26 @@ class HuefyException extends \RuntimeException
         return $this->context;
     }
 
+    public function getRequestId(): ?string
+    {
+        return $this->requestId;
+    }
+
+    public function setRequestId(?string $requestId): self
+    {
+        $this->requestId = $requestId;
+
+        return $this;
+    }
+
     public function __toString(): string
     {
         $parts = ["HuefyException[{$this->errorCode}]", $this->getMessage()];
         if ($this->statusCode !== null) {
             $parts[] = "status={$this->statusCode}";
+        }
+        if ($this->requestId !== null) {
+            $parts[] = "requestId={$this->requestId}";
         }
         if ($this->recoverable) {
             $parts[] = 'recoverable=true';
@@ -155,9 +174,9 @@ class HuefyException extends \RuntimeException
         );
     }
 
-    public static function fromStatusCode(int $statusCode, string $message): self
+    public static function fromStatusCode(int $statusCode, string $message, ?string $requestId = null, ?int $retryAfterMs = null): self
     {
-        return match (true) {
+        $exception = match (true) {
             $statusCode === 401 => self::authenticationError($message),
             $statusCode === 403 => new self(
                 message: $message,
@@ -171,7 +190,7 @@ class HuefyException extends \RuntimeException
                 statusCode: 404,
                 recoverable: false,
             ),
-            $statusCode === 429 => self::rateLimitError(),
+            $statusCode === 429 => self::rateLimitError($retryAfterMs),
             $statusCode >= 500 && $statusCode <= 599 => self::serverError($message, $statusCode),
             default => new self(
                 message: $message,
@@ -180,5 +199,11 @@ class HuefyException extends \RuntimeException
                 recoverable: false,
             ),
         };
+
+        if ($requestId !== null) {
+            $exception->setRequestId($requestId);
+        }
+
+        return $exception;
     }
 }
