@@ -24,6 +24,7 @@ class HttpClient
     private HuefyConfig $config;
     private RetryHandler $retryHandler;
     private CircuitBreaker $circuitBreaker;
+    private bool $rotatedToSecondary = false;
 
     public function __construct(HuefyConfig $config)
     {
@@ -119,7 +120,17 @@ class HttpClient
             ],
         ];
 
-        $serializedBody = $body !== null ? json_encode($body) : null;
+        $serializedBody = null;
+        if ($body !== null) {
+            $encoded = json_encode($body);
+            if ($encoded === false) {
+                throw HuefyException::serverError(
+                    'Failed to serialize request body: ' . json_last_error_msg(),
+                    0,
+                );
+            }
+            $serializedBody = $encoded;
+        }
 
         if ($serializedBody !== null) {
             $options['headers']['Content-Type'] = 'application/json';
@@ -160,6 +171,30 @@ class HttpClient
             return $decoded;
         }
 
+        // Handle 401 with key rotation: swap to secondary key and retry once.
+        if ($statusCode === 401 && !$this->rotatedToSecondary && $this->config->secondaryApiKey !== null) {
+            $this->rotatedToSecondary = true;
+            $this->config->apiKey = $this->config->secondaryApiKey;
+            $options['headers']['X-API-Key'] = $this->config->apiKey;
+            try {
+                $retryResponse = $this->client->request($method, ltrim($path, '/'), $options);
+            } catch (ConnectException $e) {
+                throw HuefyException::networkError('Connection failed: ' . $e->getMessage(), $e);
+            } catch (RequestException $e) {
+                throw HuefyException::networkError('Request failed: ' . $e->getMessage(), $e);
+            }
+            $statusCode = $retryResponse->getStatusCode();
+            $bodyString = (string) $retryResponse->getBody();
+            if ($statusCode >= 200 && $statusCode <= 299) {
+                $decoded = json_decode($bodyString, true);
+                if (!is_array($decoded)) {
+                    throw HuefyException::serverError('Failed to parse response body', $statusCode);
+                }
+                return $decoded;
+            }
+            $response = $retryResponse;
+        }
+
         $message = $this->config->enableErrorSanitization
             ? ErrorSanitizer::sanitize($bodyString)
             : $bodyString;
@@ -192,8 +227,8 @@ class HttpClient
      */
     private function executeWithResilience(callable $fn): mixed
     {
-        return $this->circuitBreaker->execute(function () use ($fn): mixed {
-            return $this->retryHandler->executeWithRetry($fn);
+        return $this->retryHandler->executeWithRetry(function () use ($fn): mixed {
+            return $this->circuitBreaker->execute($fn);
         });
     }
 }
