@@ -29,7 +29,8 @@
     },
     "scripts": {
         "test": "phpunit",
-        "test-coverage": "phpunit --coverage-text"
+        "test-coverage": "phpunit --coverage-text",
+        "lab": "php sdk-lab/run.php"
     },
     "config": {
         "sort-packages": true
