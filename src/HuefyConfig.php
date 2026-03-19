@@ -9,6 +9,18 @@ use Huefy\Utils\Logger;
 use Huefy\Utils\NullLogger;
 
 /**
+ * Rate limit information parsed from API response headers.
+ */
+class RateLimitInfo
+{
+    public function __construct(
+        public readonly int $limit,
+        public readonly int $remaining,
+        public readonly \DateTimeImmutable $resetAt,
+    ) {}
+}
+
+/**
  * Configuration value object for the Huefy SDK.
  */
 class HuefyConfig
@@ -28,6 +40,10 @@ class HuefyConfig
     public readonly bool $enableRequestSigning;
     public readonly bool $enableErrorSanitization;
     public readonly Logger $logger;
+    /** @var callable|null */
+    public readonly mixed $onRateLimitUpdate;
+    /** @var callable|null */
+    public readonly mixed $onRateLimitWarning;
 
     /**
      * @param array<string, mixed> $config Configuration array with the following keys:
@@ -68,6 +84,12 @@ class HuefyConfig
         $this->enableRequestSigning = (bool) ($config['enableRequestSigning'] ?? false);
         $this->enableErrorSanitization = (bool) ($config['enableErrorSanitization'] ?? true);
         $this->logger = $config['logger'] ?? new NullLogger();
+        $this->onRateLimitUpdate = isset($config['onRateLimitUpdate']) && is_callable($config['onRateLimitUpdate'])
+            ? $config['onRateLimitUpdate']
+            : null;
+        $this->onRateLimitWarning = isset($config['onRateLimitWarning']) && is_callable($config['onRateLimitWarning'])
+            ? $config['onRateLimitWarning']
+            : null;
 
         if ($this->timeout <= 0) {
             throw HuefyException::validationError('Timeout must be positive', 'timeout');
