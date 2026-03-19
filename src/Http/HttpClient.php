@@ -10,8 +10,10 @@ use GuzzleHttp\Exception\RequestException;
 use Huefy\Errors\ErrorSanitizer;
 use Huefy\Errors\HuefyException;
 use Huefy\HuefyConfig;
+use Huefy\RateLimitInfo;
 use Huefy\Security\Security;
 use Huefy\Utils\Version;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * HTTP client for making API requests with retry and circuit breaker support.
@@ -168,6 +170,8 @@ class HttpClient
                 );
             }
 
+            $this->parseRateLimitHeaders($response);
+
             return $decoded;
         }
 
@@ -190,6 +194,7 @@ class HttpClient
                 if (!is_array($decoded)) {
                     throw HuefyException::serverError('Failed to parse response body', $statusCode);
                 }
+                $this->parseRateLimitHeaders($retryResponse);
                 return $decoded;
             }
             $response = $retryResponse;
@@ -216,6 +221,38 @@ class HttpClient
         }
 
         throw HuefyException::fromStatusCode($statusCode, $message, $requestId, $retryAfterMs);
+    }
+
+    private function parseRateLimitHeaders(ResponseInterface $response): void
+    {
+        if ($this->config->onRateLimitUpdate === null && $this->config->onRateLimitWarning === null) {
+            return;
+        }
+
+        $limitHeader = $response->getHeaderLine('X-RateLimit-Limit');
+        $remainingHeader = $response->getHeaderLine('X-RateLimit-Remaining');
+        $resetHeader = $response->getHeaderLine('X-RateLimit-Reset');
+
+        if ($limitHeader === '' || $remainingHeader === '' || $resetHeader === '') {
+            return;
+        }
+
+        if (!is_numeric($limitHeader) || !is_numeric($remainingHeader) || !is_numeric($resetHeader)) {
+            return;
+        }
+
+        $limit = (int) $limitHeader;
+        $remaining = (int) $remainingHeader;
+        $resetAt = new \DateTimeImmutable('@' . (int) $resetHeader);
+        $info = new RateLimitInfo($limit, $remaining, $resetAt);
+
+        if ($this->config->onRateLimitUpdate !== null) {
+            ($this->config->onRateLimitUpdate)($info);
+        }
+
+        if ($this->config->onRateLimitWarning !== null && $limit > 0 && $remaining < $limit * 0.2) {
+            ($this->config->onRateLimitWarning)($info);
+        }
     }
 
     /**
