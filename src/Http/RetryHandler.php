@@ -19,8 +19,8 @@ class RetryHandler
      */
     public function __construct(
         private readonly int $maxRetries = 3,
-        private readonly int $baseDelayMs = 1_000,
-        private readonly int $maxDelayMs = 30_000,
+        private readonly int $baseDelayMs = 500,
+        private readonly int $maxDelayMs = 10_000,
         private readonly array $retryableStatusCodes = [408, 429, 500, 502, 503, 504],
     ) {
     }
@@ -70,13 +70,13 @@ class RetryHandler
      * Calculates the delay for a given attempt using exponential backoff
      * with multiplicative ±25% jitter.
      *
-     * Formula: min(maxDelay, baseDelay * 2^attempt) * (0.75 + random * 0.5)
+     * Formula: min(maxDelay, baseDelay * 2^attempt) * (0.8 + random * 0.4)
      */
     public function calculateDelay(int $attempt): int
     {
         $exponentialDelay = $this->baseDelayMs * (1 << min($attempt, 30));
         $cappedDelay = min($exponentialDelay, $this->maxDelayMs);
-        $jitterFactor = 0.75 + (mt_rand() / mt_getrandmax()) * 0.5;
+        $jitterFactor = 0.8 + (mt_rand() / mt_getrandmax()) * 0.4;
 
         return (int) ($cappedDelay * $jitterFactor);
     }
