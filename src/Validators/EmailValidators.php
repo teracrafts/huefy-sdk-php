@@ -12,7 +12,7 @@ class EmailValidators
     private const EMAIL_REGEX = '/^[^\s@]+@[^\s@]+\.[^\s@]+$/';
     private const MAX_EMAIL_LENGTH = 254;
     private const MAX_TEMPLATE_KEY_LENGTH = 100;
-    private const MAX_BULK_EMAILS = 100;
+    private const MAX_BULK_EMAILS = 1000;
 
     /**
      * Validates an email address.
