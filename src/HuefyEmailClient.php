@@ -113,6 +113,14 @@ class HuefyEmailClient extends HuefyClient
             throw HuefyException::validationError($countError);
         }
 
+        foreach ($recipients as $i => $r) {
+            $email = $r instanceof BulkRecipient ? $r->email : ($r['email'] ?? '');
+            $emailError = EmailValidators::validateEmail($email);
+            if ($emailError !== null) {
+                throw HuefyException::validationError("recipients[$i]: $emailError");
+            }
+        }
+
         $body = [
             'templateKey' => $templateKey,
             'recipients' => array_map(
