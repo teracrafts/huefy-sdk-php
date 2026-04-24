@@ -8,6 +8,7 @@ use Huefy\Errors\HuefyException;
 use Huefy\Models\BulkRecipient;
 use Huefy\Models\EmailProvider;
 use Huefy\Models\HealthResponse;
+use Huefy\Models\SendBulkEmailsRequest;
 use Huefy\Models\SendEmailRequest;
 use Huefy\Models\SendEmailResponse;
 use Huefy\Models\SendBulkEmailsResponse;
@@ -20,10 +21,12 @@ use Huefy\Validators\EmailValidators;
  *
  * Usage:
  * ```php
- * $client = new HuefyEmailClient([
- *     'apiKey' => 'your-api-key',
- * ]);
- * $response = $client->sendEmail('welcome', ['name' => 'John'], 'john@example.com');
+ * $client = new HuefyEmailClient(['apiKey' => 'your-api-key']);
+ * $response = $client->sendEmail(new SendEmailRequest(
+ *     templateKey: 'welcome',
+ *     data: ['name' => 'John'],
+ *     recipient: 'john@example.com',
+ * ));
  * $client->close();
  * ```
  */
@@ -36,35 +39,28 @@ class HuefyEmailClient extends HuefyClient
     /**
      * Sends a single email using the Huefy API.
      *
-     * @param string               $templateKey The template identifier.
-     * @param array<string, string> $data       Template merge data (all values must be strings).
-     * @param string               $recipient   The recipient email address.
-     * @param string|null          $provider    Optional email provider (ses, sendgrid, mailgun, mailchimp).
+     * @param SendEmailRequest $request The email request object.
      *
      * @return SendEmailResponse
      *
      * @throws HuefyException If validation fails or the request fails.
      */
-    public function sendEmail(
-        string $templateKey,
-        array $data,
-        string $recipient,
-        ?string $provider = null,
-    ): SendEmailResponse {
-        $errors = EmailValidators::validateSendEmailInput($templateKey, $data, $recipient);
+    public function sendEmail(SendEmailRequest $request): SendEmailResponse
+    {
+        $errors = EmailValidators::validateSendEmailInput($request->templateKey, $request->data, $request->recipient);
         if (!empty($errors)) {
             throw HuefyException::validationError(implode('; ', $errors));
         }
 
-        if ($provider !== null && !EmailProvider::isValid($provider)) {
+        if ($request->provider !== null && !EmailProvider::isValid($request->provider)) {
             throw HuefyException::validationError(
-                sprintf('Invalid provider: %s. Must be one of: %s', $provider, implode(', ', EmailProvider::ALL)),
+                sprintf('Invalid provider: %s. Must be one of: %s', $request->provider, implode(', ', EmailProvider::ALL)),
                 'provider',
             );
         }
 
         // Check for potential PII in template data
-        $dataJson = json_encode($data);
+        $dataJson = json_encode($request->data);
         if ($dataJson !== false) {
             $piiTypes = Security::detectPii($dataJson);
             if (!empty($piiTypes)) {
@@ -80,13 +76,6 @@ class HuefyEmailClient extends HuefyClient
             }
         }
 
-        $request = new SendEmailRequest(
-            templateKey: $templateKey,
-            recipient: $recipient,
-            data: $data,
-            provider: $provider,
-        );
-
         $response = $this->request('POST', self::SEND_EMAIL_PATH, $request->toArray());
 
         return SendEmailResponse::fromArray($response);
@@ -95,43 +84,40 @@ class HuefyEmailClient extends HuefyClient
     /**
      * Sends emails to multiple recipients using the same template via the bulk API.
      *
-     * @param string          $templateKey The template identifier.
-     * @param BulkRecipient[] $recipients  Array of recipient objects.
-     * @param array<string, mixed> $options Optional additional parameters (fromEmail, fromName, providerType, etc.).
+     * @param SendBulkEmailsRequest $request The bulk email request object.
      *
      * @return SendBulkEmailsResponse
      *
      * @throws HuefyException If validation fails or the request fails.
      */
-    public function sendBulkEmails(
-        string $templateKey,
-        array $recipients,
-        array $options = [],
-    ): SendBulkEmailsResponse {
-        $countError = EmailValidators::validateBulkCount(count($recipients));
+    public function sendBulkEmails(SendBulkEmailsRequest $request): SendBulkEmailsResponse
+    {
+        $countError = EmailValidators::validateBulkCount(count($request->recipients));
         if ($countError !== null) {
             throw HuefyException::validationError($countError);
         }
 
-        foreach ($recipients as $i => $r) {
-            $email = $r instanceof BulkRecipient ? $r->email : ($r['email'] ?? '');
-            $emailError = EmailValidators::validateEmail($email);
+        foreach ($request->recipients as $i => $r) {
+            $emailError = EmailValidators::validateEmail($r->email);
             if ($emailError !== null) {
                 throw HuefyException::validationError("recipients[$i]: $emailError");
             }
         }
 
         $body = [
-            'templateKey' => $templateKey,
+            'templateKey' => $request->templateKey,
             'recipients' => array_map(
                 fn(BulkRecipient $r) => array_filter(
                     ['email' => $r->email, 'type' => $r->type ?? 'to', 'data' => $r->data],
                     fn($v) => $v !== null,
                 ),
-                $recipients,
+                $request->recipients,
             ),
-            ...$options,
         ];
+
+        if ($request->provider !== null) {
+            $body['providerType'] = $request->provider;
+        }
 
         $response = $this->request('POST', self::SEND_BULK_EMAIL_PATH, $body);
 
