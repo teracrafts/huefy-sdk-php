@@ -8,8 +8,8 @@ class SendEmailRequest
 {
     public function __construct(
         public readonly string $templateKey,
-        public readonly string $recipient,
         public readonly array $data,
+        public readonly string $recipient,
         public readonly ?string $provider = null,
     ) {}
 
