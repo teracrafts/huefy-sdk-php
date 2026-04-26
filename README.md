@@ -1,17 +1,17 @@
-# teracrafts/huefy
+# teracrafts/huefy-sdk
 
 Official PHP SDK for [Huefy](https://huefy.dev) — transactional email delivery made simple.
 
 ## Installation
 
 ```bash
-composer require teracrafts/huefy
+composer require teracrafts/huefy-sdk
 ```
 
 To use a custom PSR-18 HTTP client instead of the bundled Guzzle adapter:
 
 ```bash
-composer require teracrafts/huefy psr/http-client your-psr18-client
+composer require teracrafts/huefy-sdk psr/http-client your-psr18-client
 ```
 
 ## Requirements
@@ -22,22 +22,20 @@ composer require teracrafts/huefy psr/http-client your-psr18-client
 ## Quick Start
 
 ```php
-use Teracrafts\Huefy\HuefyEmailClient;
-use Teracrafts\Huefy\HuefyConfig;
-use Teracrafts\Huefy\Model\Recipient;
-use Teracrafts\Huefy\Model\SendEmailRequest;
+use Huefy\HuefyEmailClient;
+use Huefy\Models\SendEmailRequest;
 
-$client = new HuefyEmailClient(new HuefyConfig(
-    apiKey: 'sdk_your_api_key',
-));
+$client = new HuefyEmailClient([
+    'apiKey' => 'sdk_your_api_key',
+]);
 
 $response = $client->sendEmail(new SendEmailRequest(
     templateKey: 'welcome-email',
-    recipient: new Recipient(email: 'alice@example.com', name: 'Alice'),
-    variables: ['firstName' => 'Alice', 'trialDays' => 14],
+    data: ['firstName' => 'Alice', 'trialDays' => 14],
+    recipient: 'alice@example.com',
 ));
 
-echo 'Message ID: ' . $response->messageId . PHP_EOL;
+echo 'Email ID: ' . $response->data->emailId . PHP_EOL;
 ```
 
 ## Key Features
@@ -74,37 +72,39 @@ echo 'Message ID: ' . $response->messageId . PHP_EOL;
 ## Bulk Email
 
 ```php
-use Teracrafts\Huefy\Model\BulkEmailRequest;
+use Huefy\Models\BulkRecipient;
+use Huefy\Models\SendBulkEmailsRequest;
 
-$bulk = $client->sendBulkEmails(new BulkEmailRequest(
-    emails: [
-        new SendEmailRequest(templateKey: 'promo', recipient: new Recipient('bob@example.com')),
-        new SendEmailRequest(templateKey: 'promo', recipient: new Recipient('carol@example.com')),
+$bulk = $client->sendBulkEmails(new SendBulkEmailsRequest(
+    templateKey: 'promo',
+    recipients: [
+        new BulkRecipient(email: 'bob@example.com'),
+        new BulkRecipient(email: 'carol@example.com'),
     ]
 ));
 
-echo "Sent: {$bulk->totalSent}, Failed: {$bulk->totalFailed}" . PHP_EOL;
+echo "Sent: {$bulk->data->successCount}, Failed: {$bulk->data->failureCount}" . PHP_EOL;
 ```
 
 ## Error Handling
 
 ```php
-use Teracrafts\Huefy\Exception\HuefyAuthException;
-use Teracrafts\Huefy\Exception\HuefyRateLimitException;
-use Teracrafts\Huefy\Exception\HuefyCircuitOpenException;
-use Teracrafts\Huefy\Exception\HuefyException;
+use Huefy\Errors\ErrorCode;
+use Huefy\Errors\HuefyException;
 
 try {
     $response = $client->sendEmail($request);
-    echo 'Delivered: ' . $response->messageId . PHP_EOL;
-} catch (HuefyAuthException $e) {
-    echo 'Invalid API key' . PHP_EOL;
-} catch (HuefyRateLimitException $e) {
-    echo "Rate limited. Retry after {$e->retryAfter}s" . PHP_EOL;
-} catch (HuefyCircuitOpenException $e) {
-    echo 'Circuit open — service unavailable, backing off' . PHP_EOL;
+    echo 'Delivered: ' . $response->data->emailId . PHP_EOL;
 } catch (HuefyException $e) {
-    echo "Huefy error [{$e->getCode()}]: {$e->getMessage()}" . PHP_EOL;
+    if ($e->getErrorCode() === ErrorCode::AUTHENTICATION_ERROR) {
+        echo 'Invalid API key' . PHP_EOL;
+    } elseif ($e->getErrorCode() === ErrorCode::RATE_LIMIT_ERROR) {
+        echo 'Rate limited' . PHP_EOL;
+    } elseif ($e->getErrorCode() === ErrorCode::CIRCUIT_BREAKER_OPEN) {
+        echo 'Circuit open — service unavailable, backing off' . PHP_EOL;
+    } else {
+        echo "Huefy error [{$e->getErrorCode()}]: {$e->getMessage()}" . PHP_EOL;
+    }
 }
 ```
 
@@ -123,20 +123,20 @@ try {
 
 ```php
 $health = $client->healthCheck();
-if ($health->status !== 'healthy') {
-    error_log('Huefy degraded: ' . $health->status);
+if (($health['data']['status'] ?? null) !== 'healthy') {
+    error_log('Huefy degraded: ' . ($health['data']['status'] ?? 'unknown'));
 }
 ```
 
 ## Local Development
 
-Set `HUEFY_MODE=local` to point the SDK at a local Huefy server, or override `baseUrl` in the config:
+The PHP SDK does not resolve `HUEFY_MODE` automatically. To target a localhost server, set `baseUrl` explicitly:
 
 ```php
-$client = new HuefyEmailClient(new HuefyConfig(
-    apiKey: 'sdk_local_key',
-    baseUrl: 'http://localhost:3000/api/v1/sdk',
-));
+$client = new HuefyEmailClient([
+    'apiKey' => 'sdk_local_key',
+    'baseUrl' => 'http://localhost:3000/api/v1/sdk',
+]);
 ```
 
 ## Developer Guide

@@ -39,20 +39,14 @@ class HuefyClient
     /**
      * Performs a health check against the API.
      *
-     * @return array{status: string, version: string, apiVersion: string}
+     * @return array<string, mixed>
      *
      * @throws HuefyException If the request fails.
      */
     public function healthCheck(): array
     {
         try {
-            $response = $this->httpClient->get('/health');
-
-            return [
-                'status' => 'ok',
-                'version' => Version::SDK_VERSION,
-                'apiVersion' => $response['apiVersion'] ?? 'unknown',
-            ];
+            return $this->httpClient->get('/health');
         } catch (HuefyException $e) {
             throw $e;
         } catch (\Throwable $e) {

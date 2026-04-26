@@ -14,15 +14,19 @@ class HealthResponse
 
     public static function fromArray(array $data): self
     {
+        $payload = $data['data'] ?? [];
+
         return new self(
-            status: $data['status'] ?? '',
-            timestamp: $data['timestamp'] ?? '',
-            version: $data['version'] ?? '',
+            status: $payload['status'] ?? '',
+            timestamp: $payload['timestamp'] ?? '',
+            version: $payload['version'] ?? '',
         );
     }
 
     public function isHealthy(): bool
     {
-        return strtolower($this->status) === 'ok';
+        $status = strtolower($this->status);
+
+        return $status === 'healthy' || $status === 'ok';
     }
 }
