@@ -99,18 +99,23 @@ class HuefyEmailClient extends HuefyClient
             throw HuefyException::validationError($countError);
         }
 
+        $templateError = EmailValidators::validateTemplateKey($request->templateKey);
+        if ($templateError !== null) {
+            throw HuefyException::validationError($templateError);
+        }
+
         foreach ($request->recipients as $i => $r) {
-            $emailError = EmailValidators::validateEmail($r->email);
-            if ($emailError !== null) {
-                throw HuefyException::validationError("recipients[$i]: $emailError");
+            $recipientError = EmailValidators::validateBulkRecipient($r);
+            if ($recipientError !== null) {
+                throw HuefyException::validationError("recipients[$i]: $recipientError");
             }
         }
 
         $body = [
-            'templateKey' => $request->templateKey,
+            'templateKey' => trim($request->templateKey),
             'recipients' => array_map(
                 fn(BulkRecipient $r) => array_filter(
-                    ['email' => $r->email, 'type' => $r->type ?? 'to', 'data' => $r->data],
+                    ['email' => trim($r->email), 'type' => strtolower(trim($r->type ?? 'to')), 'data' => $r->data],
                     fn($v) => $v !== null,
                 ),
                 $request->recipients,

@@ -144,6 +144,32 @@ class HuefyEmailClientTest extends TestCase
         ));
     }
 
+    public function testSendBulkEmailsThrowsOnBlankTemplateKey(): void
+    {
+        $client = $this->makeClient();
+
+        $this->expectException(HuefyException::class);
+        $this->expectExceptionMessageMatches('/Template key/');
+
+        $client->sendBulkEmails(new SendBulkEmailsRequest(
+            templateKey: '   ',
+            recipients: [new BulkRecipient(email: 'john@example.com')],
+        ));
+    }
+
+    public function testSendBulkEmailsThrowsOnInvalidRecipientType(): void
+    {
+        $client = $this->makeClient();
+
+        $this->expectException(HuefyException::class);
+        $this->expectExceptionMessageMatches('/recipients\[0\].*Recipient type/');
+
+        $client->sendBulkEmails(new SendBulkEmailsRequest(
+            templateKey: 'welcome',
+            recipients: [new BulkRecipient(email: 'john@example.com', type: 'reply-to')],
+        ));
+    }
+
     public function testSendBulkEmailsSucceeds(): void
     {
         $responseData = [

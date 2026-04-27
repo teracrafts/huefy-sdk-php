@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Huefy\Validators;
 
 use Huefy\Models\SendEmailRecipient;
+use Huefy\Models\BulkRecipient;
 
 /**
  * Validation utilities for email-related inputs.
@@ -148,6 +149,25 @@ class EmailValidators
         }
 
         return 'Recipient must be a string or recipient object';
+    }
+
+    public static function validateBulkRecipient(mixed $recipient): ?string
+    {
+        if (!$recipient instanceof BulkRecipient) {
+            return 'Recipient must be a BulkRecipient';
+        }
+
+        $emailError = self::validateEmail($recipient->email);
+        if ($emailError !== null) {
+            return $emailError;
+        }
+
+        $typeError = self::validateRecipientType($recipient->type);
+        if ($typeError !== null) {
+            return $typeError;
+        }
+
+        return self::validateRecipientData($recipient->data);
     }
 
     private static function validateRecipientType(mixed $type): ?string
