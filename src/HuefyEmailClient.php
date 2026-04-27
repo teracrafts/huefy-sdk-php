@@ -25,7 +25,7 @@ use Huefy\Validators\EmailValidators;
  * $response = $client->sendEmail(new SendEmailRequest(
  *     templateKey: 'welcome',
  *     data: ['name' => 'John'],
- *     recipient: 'john@example.com',
+ *     recipient: new SendEmailRecipient(email: 'john@example.com', type: 'cc'),
  * ));
  * $client->close();
  * ```
@@ -75,6 +75,8 @@ class HuefyEmailClient extends HuefyClient
                 );
             }
         }
+
+        $this->warnIfPotentialRecipientPii($request->recipient);
 
         $response = $this->request('POST', self::SEND_EMAIL_PATH, $request->toArray());
 
@@ -136,5 +138,41 @@ class HuefyEmailClient extends HuefyClient
         $response = $this->request('GET', self::HEALTH_PATH);
 
         return HealthResponse::fromArray($response);
+    }
+
+    /**
+     * @param string|\Huefy\Models\SendEmailRecipient|array<string, mixed> $recipient
+     */
+    private function warnIfPotentialRecipientPii(string|object|array $recipient): void
+    {
+        $recipientData = null;
+
+        if ($recipient instanceof \Huefy\Models\SendEmailRecipient) {
+            $recipientData = $recipient->data;
+        } elseif (is_array($recipient) && isset($recipient['data']) && is_array($recipient['data'])) {
+            $recipientData = $recipient['data'];
+        }
+
+        if ($recipientData === null) {
+            return;
+        }
+
+        $dataJson = json_encode($recipientData);
+        if ($dataJson === false) {
+            return;
+        }
+
+        $piiTypes = Security::detectPii($dataJson);
+        if (!empty($piiTypes)) {
+            trigger_error(
+                sprintf(
+                    'Potential PII detected in recipient data. Types: [%s]. '
+                    . 'Please review whether this data should be transmitted and ensure '
+                    . 'compliance with your data protection policies.',
+                    implode(', ', $piiTypes),
+                ),
+                E_USER_WARNING,
+            );
+        }
     }
 }

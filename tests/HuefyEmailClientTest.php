@@ -9,6 +9,7 @@ use Huefy\HuefyEmailClient;
 use Huefy\Models\BulkRecipient;
 use Huefy\Models\SendBulkEmailsRequest;
 use Huefy\Models\SendEmailRequest;
+use Huefy\Models\SendEmailRecipient;
 use PHPUnit\Framework\TestCase;
 
 class HuefyEmailClientTest extends TestCase
@@ -83,6 +84,36 @@ class HuefyEmailClientTest extends TestCase
         $this->assertSame('email-abc', $response->data->emailId);
         $this->assertSame('sent', $response->data->status);
         $this->assertCount(1, $response->data->recipients);
+        $this->assertSame('john@example.com', $response->data->recipients[0]->email);
+    }
+
+    public function testSendEmailAcceptsRecipientObject(): void
+    {
+        $responseData = [
+            'success' => true,
+            'correlationId' => 'corr-123',
+            'data' => [
+                'emailId' => 'email-abc',
+                'status' => 'sent',
+                'recipients' => [
+                    ['email' => 'john@example.com', 'status' => 'sent'],
+                ],
+            ],
+        ];
+
+        $client = $this->makeClientWithResponse($responseData);
+
+        $response = $client->sendEmail(new SendEmailRequest(
+            templateKey: 'welcome',
+            data: ['name' => 'John'],
+            recipient: new SendEmailRecipient(
+                email: 'john@example.com',
+                type: 'cc',
+                data: ['locale' => 'en'],
+            ),
+        ));
+
+        $this->assertTrue($response->success);
         $this->assertSame('john@example.com', $response->data->recipients[0]->email);
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Huefy\Tests;
 
+use Huefy\Models\SendEmailRecipient;
 use PHPUnit\Framework\TestCase;
 use Huefy\Validators\EmailValidators;
 
@@ -91,18 +92,14 @@ class EmailValidatorsTest extends TestCase
         $this->assertNull(EmailValidators::validateEmailData([]));
     }
 
-    public function testNonStringValueReturnsError(): void
+    public function testNonStringValueReturnsNull(): void
     {
-        $result = EmailValidators::validateEmailData(['count' => 5]);
-        $this->assertNotNull($result);
-        $this->assertStringContainsString('must be a string', $result);
+        $this->assertNull(EmailValidators::validateEmailData(['count' => 5]));
     }
 
-    public function testNestedArrayValueReturnsError(): void
+    public function testNestedArrayValueReturnsNull(): void
     {
-        $result = EmailValidators::validateEmailData(['items' => ['a', 'b']]);
-        $this->assertNotNull($result);
-        $this->assertStringContainsString('must be a string', $result);
+        $this->assertNull(EmailValidators::validateEmailData(['items' => ['a', 'b']]));
     }
 
     // --- validateBulkCount ---
@@ -128,14 +125,14 @@ class EmailValidatorsTest extends TestCase
 
     public function testOverMaxBulkCountReturnsError(): void
     {
-        $result = EmailValidators::validateBulkCount(101);
+        $result = EmailValidators::validateBulkCount(1001);
         $this->assertNotNull($result);
-        $this->assertStringContainsString('Maximum of 100', $result);
+        $this->assertStringContainsString('Maximum of 1000', $result);
     }
 
     public function testExactlyMaxBulkCountReturnsNull(): void
     {
-        $this->assertNull(EmailValidators::validateBulkCount(100));
+        $this->assertNull(EmailValidators::validateBulkCount(1000));
     }
 
     // --- validateSendEmailInput ---
@@ -143,6 +140,16 @@ class EmailValidatorsTest extends TestCase
     public function testValidInputReturnsEmptyArray(): void
     {
         $errors = EmailValidators::validateSendEmailInput('tpl', ['name' => 'John'], 'user@test.com');
+        $this->assertEmpty($errors);
+    }
+
+    public function testRecipientObjectInputReturnsEmptyArray(): void
+    {
+        $errors = EmailValidators::validateSendEmailInput(
+            'tpl',
+            ['name' => 'John'],
+            new SendEmailRecipient(email: 'user@test.com', type: 'bcc', data: ['locale' => 'en']),
+        );
         $this->assertEmpty($errors);
     }
 
@@ -156,5 +163,26 @@ class EmailValidatorsTest extends TestCase
     {
         $errors = EmailValidators::validateSendEmailInput('tpl', ['name' => 'John'], 'bad');
         $this->assertCount(1, $errors);
+    }
+
+    public function testInvalidRecipientObjectReturnsSingleError(): void
+    {
+        $errors = EmailValidators::validateSendEmailInput(
+            'tpl',
+            ['name' => 'John'],
+            new SendEmailRecipient(email: 'bad'),
+        );
+        $this->assertCount(1, $errors);
+    }
+
+    public function testInvalidRecipientObjectTypeReturnsSingleError(): void
+    {
+        $errors = EmailValidators::validateSendEmailInput(
+            'tpl',
+            ['name' => 'John'],
+            new SendEmailRecipient(email: 'user@test.com', type: 'reply-to'),
+        );
+        $this->assertCount(1, $errors);
+        $this->assertStringContainsString('Recipient type', $errors[0]);
     }
 }

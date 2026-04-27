@@ -119,6 +119,15 @@ class HuefyConfig
      */
     public function resolvedBaseUrl(): string
     {
-        return $this->baseUrl ?? 'https://api.huefy.dev/api/v1/sdk';
+        if ($this->baseUrl !== null) {
+            return $this->baseUrl;
+        }
+
+        $mode = getenv('HUEFY_MODE');
+        if (is_string($mode) && strtolower($mode) === 'local') {
+            return 'https://api.huefy.on/api/v1/sdk';
+        }
+
+        return 'https://api.huefy.dev/api/v1/sdk';
     }
 }

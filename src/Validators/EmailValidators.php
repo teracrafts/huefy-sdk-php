@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Huefy\Validators;
 
+use Huefy\Models\SendEmailRecipient;
+
 /**
  * Validation utilities for email-related inputs.
  */
 class EmailValidators
 {
+    private const VALID_RECIPIENT_TYPES = ['to', 'cc', 'bcc'];
     private const EMAIL_REGEX = '/^[^\s@]+@[^\s@]+\.[^\s@]+$/';
     private const MAX_EMAIL_LENGTH = 254;
     private const MAX_TEMPLATE_KEY_LENGTH = 100;
@@ -63,11 +66,6 @@ class EmailValidators
      */
     public static function validateEmailData(array $data): ?string
     {
-        foreach ($data as $key => $value) {
-            if (!is_string($value)) {
-                return sprintf('Template data value for key "%s" must be a string', $key);
-            }
-        }
         return null;
     }
 
@@ -94,7 +92,7 @@ class EmailValidators
      *
      * @return string[] Array of error messages. Empty if valid.
      */
-    public static function validateSendEmailInput(string $templateKey, array $data, string $recipient): array
+    public static function validateSendEmailInput(string $templateKey, array $data, mixed $recipient): array
     {
         $errors = [];
         $keyError = self::validateTemplateKey($templateKey);
@@ -105,10 +103,83 @@ class EmailValidators
         if ($dataError !== null) {
             $errors[] = $dataError;
         }
-        $emailError = self::validateEmail($recipient);
+        $emailError = self::validateRecipient($recipient);
         if ($emailError !== null) {
             $errors[] = $emailError;
         }
         return $errors;
+    }
+
+    public static function validateRecipient(mixed $recipient): ?string
+    {
+        if (is_string($recipient)) {
+            return self::validateEmail($recipient);
+        }
+
+        if ($recipient instanceof SendEmailRecipient) {
+            $emailError = self::validateEmail($recipient->email);
+            if ($emailError !== null) {
+                return $emailError;
+            }
+            $typeError = self::validateRecipientType($recipient->type);
+            if ($typeError !== null) {
+                return $typeError;
+            }
+            return self::validateRecipientData($recipient->data);
+        }
+
+        if (is_array($recipient)) {
+            $email = $recipient['email'] ?? '';
+            if (!is_string($email)) {
+                return 'Recipient email is required';
+            }
+
+            $emailError = self::validateEmail($email);
+            if ($emailError !== null) {
+                return $emailError;
+            }
+
+            $typeError = self::validateRecipientType($recipient['type'] ?? null);
+            if ($typeError !== null) {
+                return $typeError;
+            }
+
+            return self::validateRecipientData($recipient['data'] ?? null);
+        }
+
+        return 'Recipient must be a string or recipient object';
+    }
+
+    private static function validateRecipientType(mixed $type): ?string
+    {
+        if ($type === null) {
+            return null;
+        }
+        if (!is_string($type)) {
+            return 'Recipient type must be one of: to, cc, bcc';
+        }
+
+        $normalized = strtolower(trim($type));
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (!in_array($normalized, self::VALID_RECIPIENT_TYPES, true)) {
+            return 'Recipient type must be one of: to, cc, bcc';
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $data
+     */
+    private static function validateRecipientData(mixed $data): ?string
+    {
+        if ($data === null || is_array($data)) {
+            return null;
+        }
+
+        return 'Recipient data must be an object';
     }
 }

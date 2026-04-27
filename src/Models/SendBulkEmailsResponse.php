@@ -10,13 +10,22 @@ class SendBulkEmailsResponseData
         public readonly string $batchId,
         public readonly string $status,
         public readonly string $templateKey,
+        public readonly int $templateVersion,
+        public readonly string $senderUsed,
+        public readonly bool $senderVerified,
         public readonly int $totalRecipients,
+        public readonly int $processedCount,
         public readonly int $successCount,
         public readonly int $failureCount,
         public readonly int $suppressedCount,
         public readonly string $startedAt,
+        public readonly ?string $completedAt,
         /** @var RecipientStatus[] */
         public readonly array $recipients,
+        /** @var array<int, array<string, mixed>> */
+        public readonly array $errors,
+        /** @var array<string, mixed>|null */
+        public readonly ?array $metadata,
     ) {}
 
     public static function fromArray(array $data): self
@@ -30,12 +39,19 @@ class SendBulkEmailsResponseData
             batchId: $data['batchId'] ?? '',
             status: $data['status'] ?? '',
             templateKey: $data['templateKey'] ?? '',
+            templateVersion: $data['templateVersion'] ?? 0,
+            senderUsed: $data['senderUsed'] ?? '',
+            senderVerified: $data['senderVerified'] ?? false,
             totalRecipients: $data['totalRecipients'] ?? 0,
+            processedCount: $data['processedCount'] ?? 0,
             successCount: $data['successCount'] ?? 0,
             failureCount: $data['failureCount'] ?? 0,
             suppressedCount: $data['suppressedCount'] ?? 0,
             startedAt: $data['startedAt'] ?? '',
+            completedAt: $data['completedAt'] ?? null,
             recipients: $recipients,
+            errors: $data['errors'] ?? [],
+            metadata: $data['metadata'] ?? null,
         );
     }
 }

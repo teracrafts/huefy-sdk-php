@@ -78,6 +78,6 @@ class RetryHandler
         $cappedDelay = min($exponentialDelay, $this->maxDelayMs);
         $jitterFactor = 0.8 + (mt_rand() / mt_getrandmax()) * 0.4;
 
-        return (int) ($cappedDelay * $jitterFactor);
+        return min((int) ($cappedDelay * $jitterFactor), $this->maxDelayMs);
     }
 }
