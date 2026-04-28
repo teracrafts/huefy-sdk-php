@@ -14,6 +14,14 @@ use PHPUnit\Framework\TestCase;
 
 class HuefyEmailClientTest extends TestCase
 {
+    public function testLegacyNamespaceAliasesRemainAvailable(): void
+    {
+        self::assertTrue(class_exists(\Huefy\HuefyEmailClient::class));
+        self::assertTrue(class_exists(\Huefy\HuefyConfig::class));
+        self::assertTrue(class_exists(\Huefy\RateLimitInfo::class));
+        self::assertTrue(class_exists(\Huefy\Models\EmailProvider::class));
+    }
+
     // --- sendEmail validation ---
 
     public function testSendEmailThrowsOnEmptyTemplateKey(): void

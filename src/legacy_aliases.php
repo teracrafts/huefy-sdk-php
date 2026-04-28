@@ -6,6 +6,7 @@ $aliases = [
     'Teracrafts\\Huefy\\HuefyClient' => 'Huefy\\HuefyClient',
     'Teracrafts\\Huefy\\HuefyConfig' => 'Huefy\\HuefyConfig',
     'Teracrafts\\Huefy\\HuefyEmailClient' => 'Huefy\\HuefyEmailClient',
+    'Teracrafts\\Huefy\\RateLimitInfo' => 'Huefy\\RateLimitInfo',
     'Teracrafts\\Huefy\\Errors\\ErrorCode' => 'Huefy\\Errors\\ErrorCode',
     'Teracrafts\\Huefy\\Errors\\ErrorSanitizer' => 'Huefy\\Errors\\ErrorSanitizer',
     'Teracrafts\\Huefy\\Errors\\HuefyException' => 'Huefy\\Errors\\HuefyException',
