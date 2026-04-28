@@ -19,12 +19,15 @@
     },
     "autoload": {
         "psr-4": {
-            "Huefy\\": "src/"
-        }
+            "Teracrafts\\Huefy\\": "src/"
+        },
+        "files": [
+            "src/legacy_aliases.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
-            "Huefy\\Tests\\": "tests/"
+            "Teracrafts\\Huefy\\Tests\\": "tests/"
         }
     },
     "scripts": {

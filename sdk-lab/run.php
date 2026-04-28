@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Huefy\HuefyClient;
-use Huefy\Errors\ErrorSanitizer;
-use Huefy\Http\CircuitBreaker;
-use Huefy\Security\Security;
+use Teracrafts\Huefy\HuefyClient;
+use Teracrafts\Huefy\Errors\ErrorSanitizer;
+use Teracrafts\Huefy\Http\CircuitBreaker;
+use Teracrafts\Huefy\Security\Security;
 
 const GREEN = "\033[32m";
 const RED   = "\033[31m";

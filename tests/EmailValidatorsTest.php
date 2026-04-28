@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Tests;
+namespace Teracrafts\Huefy\Tests;
 
-use Huefy\Models\SendEmailRecipient;
+use Teracrafts\Huefy\Models\SendEmailRecipient;
 use PHPUnit\Framework\TestCase;
-use Huefy\Validators\EmailValidators;
+use Teracrafts\Huefy\Validators\EmailValidators;
 
 class EmailValidatorsTest extends TestCase
 {

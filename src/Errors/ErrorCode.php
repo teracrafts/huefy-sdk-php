@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Errors;
+namespace Teracrafts\Huefy\Errors;
 
 /**
  * Error code constants for the Huefy SDK.

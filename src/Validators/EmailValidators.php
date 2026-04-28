@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Validators;
+namespace Teracrafts\Huefy\Validators;
 
-use Huefy\Models\SendEmailRecipient;
-use Huefy\Models\BulkRecipient;
+use Teracrafts\Huefy\Models\SendEmailRecipient;
+use Teracrafts\Huefy\Models\BulkRecipient;
 
 /**
  * Validation utilities for email-related inputs.

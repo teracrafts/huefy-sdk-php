@@ -22,9 +22,9 @@ composer require teracrafts/huefy-sdk psr/http-client your-psr18-client
 ## Quick Start
 
 ```php
-use Huefy\HuefyEmailClient;
-use Huefy\Models\SendEmailRequest;
-use Huefy\Models\SendEmailRecipient;
+use Teracrafts\Huefy\HuefyEmailClient;
+use Teracrafts\Huefy\Models\SendEmailRequest;
+use Teracrafts\Huefy\Models\SendEmailRecipient;
 
 $client = new HuefyEmailClient([
     'apiKey' => 'sdk_your_api_key',
@@ -77,8 +77,8 @@ echo 'Email ID: ' . $response->data->emailId . PHP_EOL;
 ## Bulk Email
 
 ```php
-use Huefy\Models\BulkRecipient;
-use Huefy\Models\SendBulkEmailsRequest;
+use Teracrafts\Huefy\Models\BulkRecipient;
+use Teracrafts\Huefy\Models\SendBulkEmailsRequest;
 
 $bulk = $client->sendBulkEmails(new SendBulkEmailsRequest(
     templateKey: 'promo',
@@ -94,8 +94,8 @@ echo "Sent: {$bulk->data->successCount}, Failed: {$bulk->data->failureCount}" . 
 ## Error Handling
 
 ```php
-use Huefy\Errors\ErrorCode;
-use Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\Errors\ErrorCode;
+use Teracrafts\Huefy\Errors\HuefyException;
 
 try {
     $response = $client->sendEmail($request);
@@ -143,6 +143,10 @@ $client = new HuefyEmailClient([
     'baseUrl' => 'https://api.huefy.on/api/v1/sdk',
 ]);
 ```
+
+## Namespace Compatibility
+
+The canonical PHP namespace is `Teracrafts\Huefy\...`. Existing `Huefy\...` references remain supported through the bundled compatibility aliases.
 
 ## Developer Guide
 

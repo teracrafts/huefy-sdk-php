@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Http;
+namespace Teracrafts\Huefy\Http;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
-use Huefy\Errors\ErrorSanitizer;
-use Huefy\Errors\HuefyException;
-use Huefy\HuefyConfig;
-use Huefy\RateLimitInfo;
-use Huefy\Security\Security;
-use Huefy\Utils\Version;
+use Teracrafts\Huefy\Errors\ErrorSanitizer;
+use Teracrafts\Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\HuefyConfig;
+use Teracrafts\Huefy\RateLimitInfo;
+use Teracrafts\Huefy\Security\Security;
+use Teracrafts\Huefy\Utils\Version;
 use Psr\Http\Message\ResponseInterface;
 
 /**

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Huefy;
+namespace Teracrafts\Huefy;
 
-use Huefy\Errors\HuefyException;
-use Huefy\Utils\Logger;
-use Huefy\Utils\NullLogger;
+use Teracrafts\Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\Utils\Logger;
+use Teracrafts\Huefy\Utils\NullLogger;
 
 /**
  * Rate limit information parsed from API response headers.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Utils;
+namespace Teracrafts\Huefy\Utils;
 
 /**
  * Version information for the Huefy SDK.

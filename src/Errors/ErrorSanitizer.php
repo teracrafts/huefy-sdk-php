@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Errors;
+namespace Teracrafts\Huefy\Errors;
 
 /**
  * Sanitizes error messages and context data to remove PII and sensitive

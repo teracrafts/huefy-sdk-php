@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Errors;
+namespace Teracrafts\Huefy\Errors;
 
 /**
  * Base exception for all Huefy SDK errors.

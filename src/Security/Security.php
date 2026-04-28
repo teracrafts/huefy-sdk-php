@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Security;
+namespace Teracrafts\Huefy\Security;
 
 /**
  * Security utilities for the Huefy SDK.

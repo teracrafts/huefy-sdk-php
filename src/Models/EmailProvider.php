@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Models;
+namespace Teracrafts\Huefy\Models;
 
 class EmailProvider
 {

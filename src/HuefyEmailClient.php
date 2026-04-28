@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Huefy;
+namespace Teracrafts\Huefy;
 
-use Huefy\Errors\HuefyException;
-use Huefy\Models\BulkRecipient;
-use Huefy\Models\EmailProvider;
-use Huefy\Models\HealthResponse;
-use Huefy\Models\SendBulkEmailsRequest;
-use Huefy\Models\SendEmailRequest;
-use Huefy\Models\SendEmailResponse;
-use Huefy\Models\SendBulkEmailsResponse;
-use Huefy\Security\Security;
-use Huefy\Validators\EmailValidators;
+use Teracrafts\Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\Models\BulkRecipient;
+use Teracrafts\Huefy\Models\EmailProvider;
+use Teracrafts\Huefy\Models\HealthResponse;
+use Teracrafts\Huefy\Models\SendBulkEmailsRequest;
+use Teracrafts\Huefy\Models\SendEmailRequest;
+use Teracrafts\Huefy\Models\SendEmailResponse;
+use Teracrafts\Huefy\Models\SendBulkEmailsResponse;
+use Teracrafts\Huefy\Security\Security;
+use Teracrafts\Huefy\Validators\EmailValidators;
 
 /**
  * Email-specific client that extends the base HuefyClient with email
@@ -146,13 +146,13 @@ class HuefyEmailClient extends HuefyClient
     }
 
     /**
-     * @param string|\Huefy\Models\SendEmailRecipient|array<string, mixed> $recipient
+     * @param string|\Teracrafts\Huefy\Models\SendEmailRecipient|array<string, mixed> $recipient
      */
     private function warnIfPotentialRecipientPii(string|object|array $recipient): void
     {
         $recipientData = null;
 
-        if ($recipient instanceof \Huefy\Models\SendEmailRecipient) {
+        if ($recipient instanceof \Teracrafts\Huefy\Models\SendEmailRecipient) {
             $recipientData = $recipient->data;
         } elseif (is_array($recipient) && isset($recipient['data']) && is_array($recipient['data'])) {
             $recipientData = $recipient['data'];

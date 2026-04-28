@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Huefy;
+namespace Teracrafts\Huefy;
 
-use Huefy\Errors\HuefyException;
-use Huefy\Http\HttpClient;
-use Huefy\Utils\Version;
+use Teracrafts\Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\Http\HttpClient;
+use Teracrafts\Huefy\Utils\Version;
 
 /**
  * Main client for the Huefy SDK.

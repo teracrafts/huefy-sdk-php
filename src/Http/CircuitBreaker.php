@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Http;
+namespace Teracrafts\Huefy\Http;
 
-use Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\Errors\HuefyException;
 
 /**
  * Circuit breaker implementation using a state machine pattern.

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Http;
+namespace Teracrafts\Huefy\Http;
 
-use Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\Errors\HuefyException;
 
 /**
  * Handles retry logic with exponential backoff and jitter.

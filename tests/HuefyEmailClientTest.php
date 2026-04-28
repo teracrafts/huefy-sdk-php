@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Tests;
+namespace Teracrafts\Huefy\Tests;
 
-use Huefy\Errors\HuefyException;
-use Huefy\HuefyEmailClient;
-use Huefy\Models\BulkRecipient;
-use Huefy\Models\SendBulkEmailsRequest;
-use Huefy\Models\SendEmailRequest;
-use Huefy\Models\SendEmailRecipient;
+use Teracrafts\Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\HuefyEmailClient;
+use Teracrafts\Huefy\Models\BulkRecipient;
+use Teracrafts\Huefy\Models\SendBulkEmailsRequest;
+use Teracrafts\Huefy\Models\SendEmailRequest;
+use Teracrafts\Huefy\Models\SendEmailRecipient;
 use PHPUnit\Framework\TestCase;
 
 class HuefyEmailClientTest extends TestCase

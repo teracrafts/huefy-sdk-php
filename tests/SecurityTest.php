@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Tests;
+namespace Teracrafts\Huefy\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Huefy\Security\Security;
+use Teracrafts\Huefy\Security\Security;
 
 class SecurityTest extends TestCase
 {

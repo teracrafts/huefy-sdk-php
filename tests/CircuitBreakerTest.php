@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Huefy\Tests;
+namespace Teracrafts\Huefy\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Huefy\Errors\ErrorCode;
-use Huefy\Errors\HuefyException;
-use Huefy\Http\CircuitBreaker;
+use Teracrafts\Huefy\Errors\ErrorCode;
+use Teracrafts\Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\Http\CircuitBreaker;
 
 class CircuitBreakerTest extends TestCase
 {
