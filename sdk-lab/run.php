@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Teracrafts\Huefy\HuefyClient;
-use Teracrafts\Huefy\Errors\ErrorSanitizer;
-use Teracrafts\Huefy\Http\CircuitBreaker;
-use Teracrafts\Huefy\Security\Security;
+use Teracrafts\Huefy\Errors\HuefyException;
+use Teracrafts\Huefy\HuefyEmailClient;
+use Teracrafts\Huefy\Models\BulkRecipient;
+use Teracrafts\Huefy\Models\HealthResponse;
+use Teracrafts\Huefy\Models\SendBulkEmailsRequest;
+use Teracrafts\Huefy\Models\SendBulkEmailsResponse;
+use Teracrafts\Huefy\Models\SendEmailRecipient;
+use Teracrafts\Huefy\Models\SendEmailRequest;
+use Teracrafts\Huefy\Models\SendEmailResponse;
 
 const GREEN = "\033[32m";
 const RED   = "\033[31m";
@@ -30,98 +35,200 @@ function fail(string $label, string $reason): void
     echo RED . '[FAIL]' . RESET . " {$label} — {$reason}\n";
 }
 
+final class LabEmailClient extends HuefyEmailClient
+{
+    /** @var list<array<string, mixed>> */
+    private array $responses = [];
+    /** @var list<array{method:string,path:string,body:?array}> */
+    public array $calls = [];
+
+    /**
+     * @param list<array<string, mixed>> $responses
+     */
+    public function queueResponses(array $responses): void
+    {
+        $this->responses = $responses;
+        $this->calls = [];
+    }
+
+    public function request(string $method, string $path, ?array $body = null): array
+    {
+        $this->calls[] = ['method' => $method, 'path' => $path, 'body' => $body];
+        if ($this->responses === []) {
+            throw new \RuntimeException('No queued response');
+        }
+        return array_shift($this->responses);
+    }
+}
+
 echo "=== Huefy PHP SDK Lab ===\n\n";
 
 $client = null;
 
-// 1. Initialization
 try {
-    $client = new HuefyClient(['apiKey' => 'sdk_lab_test_key_xxxxxxxxxxxx']);
+    $client = new LabEmailClient(['apiKey' => 'sdk_lab_test_key_xxxxxxxxxxxx']);
     pass('Initialization');
 } catch (\Throwable $e) {
     fail('Initialization', $e->getMessage());
 }
 
-// 2. Config validation
 try {
-    new HuefyClient(['apiKey' => '']);
-    fail('Config validation', 'Expected exception for empty API key');
+    assert($client instanceof LabEmailClient);
+    $client->queueResponses([
+        [
+            'success' => true,
+            'data' => [
+                'emailId' => 'email_123',
+                'status' => 'queued',
+                'recipients' => [['email' => 'alice@example.com', 'status' => 'queued']],
+            ],
+            'correlationId' => 'corr_send_123',
+        ],
+    ]);
+    $response = $client->sendEmail(new SendEmailRequest(
+        templateKey: ' welcome-email ',
+        data: ['firstName' => 'Alice'],
+        recipient: new SendEmailRecipient(email: ' alice@example.com ', type: 'CC', data: ['locale' => 'en']),
+        provider: 'ses',
+    ));
+    $call = $client->calls[0] ?? null;
+    $recipient = $call['body']['recipient'] ?? null;
+    $ok =
+        $call !== null &&
+        $call['method'] === 'POST' &&
+        $call['path'] === '/emails/send' &&
+        ($call['body']['templateKey'] ?? null) === 'welcome-email' &&
+        is_array($recipient) &&
+        ($recipient['email'] ?? null) === 'alice@example.com' &&
+        ($recipient['type'] ?? null) === 'cc' &&
+        ($call['body']['providerType'] ?? null) === 'ses' &&
+        $response instanceof SendEmailResponse &&
+        $response->data->emailId === 'email_123';
+    $ok ? pass('Single email contract') : fail('Single email contract', json_encode($call) ?: 'call mismatch');
 } catch (\Throwable $e) {
-    pass('Config validation');
+    fail('Single email contract', $e->getMessage());
 }
 
-// 3. HMAC signing
 try {
-    $payload = json_encode(['test' => 'data']);
-    $sig = Security::hmacSign($payload, 'test_secret');
-    if (strlen($sig) === 64) {
-        pass('HMAC signing');
-    } else {
-        fail('HMAC signing', 'Expected 64-char hex, got length ' . strlen($sig));
-    }
+    assert($client instanceof LabEmailClient);
+    $client->queueResponses([
+        [
+            'success' => true,
+            'data' => [
+                'batchId' => 'batch_123',
+                'status' => 'processing',
+                'templateKey' => 'digest',
+                'templateVersion' => 3,
+                'senderUsed' => 'alerts@huefy.dev',
+                'senderVerified' => true,
+                'totalRecipients' => 2,
+                'processedCount' => 0,
+                'successCount' => 0,
+                'failureCount' => 0,
+                'suppressedCount' => 0,
+                'startedAt' => '2026-05-07T10:00:00Z',
+                'recipients' => [
+                    ['email' => 'alice@example.com', 'status' => 'queued'],
+                    ['email' => 'bob@example.com', 'status' => 'queued'],
+                ],
+            ],
+            'correlationId' => 'corr_bulk_123',
+        ],
+    ]);
+    $response = $client->sendBulkEmails(new SendBulkEmailsRequest(
+        templateKey: ' digest ',
+        recipients: [
+            new BulkRecipient(email: ' alice@example.com ', type: 'TO', data: ['locale' => 'en']),
+            new BulkRecipient(email: ' bob@example.com ', type: 'BCC'),
+        ],
+        provider: 'mailgun',
+    ));
+    $call = $client->calls[0] ?? null;
+    $recipients = $call['body']['recipients'] ?? null;
+    $ok =
+        $call !== null &&
+        $call['method'] === 'POST' &&
+        $call['path'] === '/emails/send-bulk' &&
+        ($call['body']['templateKey'] ?? null) === 'digest' &&
+        ($call['body']['providerType'] ?? null) === 'mailgun' &&
+        is_array($recipients) &&
+        ($recipients[0]['email'] ?? null) === 'alice@example.com' &&
+        ($recipients[0]['type'] ?? null) === 'to' &&
+        ($recipients[1]['type'] ?? null) === 'bcc' &&
+        $response instanceof SendBulkEmailsResponse &&
+        $response->data->batchId === 'batch_123';
+    $ok ? pass('Bulk email contract') : fail('Bulk email contract', json_encode($call) ?: 'call mismatch');
 } catch (\Throwable $e) {
-    fail('HMAC signing', $e->getMessage());
+    fail('Bulk email contract', $e->getMessage());
 }
 
-// 4. Error sanitization
 try {
-    $input = 'Error at 192.168.1.1 for user@example.com';
-    $sanitized = ErrorSanitizer::sanitize($input);
-    if (!str_contains($sanitized, '192.168.1.1') && !str_contains($sanitized, 'user@example.com')) {
-        pass('Error sanitization');
-    } else {
-        fail('Error sanitization', 'IP or email not redacted: ' . $sanitized);
-    }
+    assert($client instanceof LabEmailClient);
+    $client->queueResponses([[]]);
+    $client->sendEmail(new SendEmailRequest(
+        templateKey: 'welcome',
+        data: [],
+        recipient: new SendEmailRecipient(email: 'not-an-email', type: 'reply-to'),
+    ));
+    fail('Validation rejects invalid single recipient', 'Expected validation error');
+} catch (HuefyException $e) {
+    $message = strtolower($e->getMessage());
+    (str_contains($message, 'invalid email') || str_contains($message, 'recipient type'))
+        ? pass('Validation rejects invalid single recipient')
+        : fail('Validation rejects invalid single recipient', $e->getMessage());
 } catch (\Throwable $e) {
-    fail('Error sanitization', $e->getMessage());
+    fail('Validation rejects invalid single recipient', $e->getMessage());
 }
 
-// 5. PII detection
 try {
-    $piiText = '{"email": "t@t.com", "name": "John", "ssn": "123-45-6789"}';
-    $detected = Security::detectPii($piiText);
-    if (!empty($detected) && (in_array('email', $detected, true) || in_array('ssn', $detected, true))) {
-        pass('PII detection');
-    } else {
-        fail('PII detection', 'Expected email/ssn in: ' . implode(', ', $detected));
-    }
+    assert($client instanceof LabEmailClient);
+    $client->queueResponses([[]]);
+    $client->sendBulkEmails(new SendBulkEmailsRequest(
+        templateKey: 'digest',
+        recipients: [],
+    ));
+    fail('Validation rejects invalid bulk request', 'Expected validation error');
+} catch (HuefyException $e) {
+    str_contains(strtolower($e->getMessage()), 'at least one email')
+        ? pass('Validation rejects invalid bulk request')
+        : fail('Validation rejects invalid bulk request', $e->getMessage());
 } catch (\Throwable $e) {
-    fail('PII detection', $e->getMessage());
+    fail('Validation rejects invalid bulk request', $e->getMessage());
 }
 
-// 6. Circuit breaker state
 try {
-    $cb = new CircuitBreaker();
-    $state = $cb->getState();
-    if ($state === CircuitBreaker::STATE_CLOSED) {
-        pass('Circuit breaker state');
-    } else {
-        fail('Circuit breaker state', 'Expected closed, got: ' . $state);
-    }
+    assert($client instanceof LabEmailClient);
+    $client->queueResponses([
+        [
+            'success' => true,
+            'data' => [
+                'status' => 'healthy',
+                'timestamp' => '2026-05-07T10:00:00Z',
+                'version' => '1.0.0',
+            ],
+            'correlationId' => 'corr_health_123',
+        ],
+    ]);
+    $response = $client->emailHealthCheck();
+    $call = $client->calls[0] ?? null;
+    $ok =
+        $call !== null &&
+        $call['method'] === 'GET' &&
+        $call['path'] === '/health' &&
+        $response instanceof HealthResponse &&
+        $response->status === 'healthy';
+    $ok ? pass('Health check path') : fail('Health check path', json_encode($call) ?: 'call mismatch');
 } catch (\Throwable $e) {
-    fail('Circuit breaker state', $e->getMessage());
+    fail('Health check path', $e->getMessage());
 }
 
-// 7. Health check
 try {
-    $ctx = stream_context_create(['http' => ['timeout' => 5, 'ignore_errors' => true]]);
-    @file_get_contents('https://api.huefy.dev/api/v1/sdk/health', false, $ctx);
-} catch (\Throwable $e) {
-    // ignore
-}
-pass('Health check');
-
-// 8. Cleanup
-try {
-    if ($client !== null) {
-        $client->close();
-    }
+    $client?->close();
     pass('Cleanup');
 } catch (\Throwable $e) {
     fail('Cleanup', $e->getMessage());
 }
 
-// Summary
 echo "\n";
 echo "========================================\n";
 echo "Results: {$passed} passed, {$failed} failed\n";
@@ -130,6 +237,5 @@ echo "========================================\n\n";
 if ($failed === 0) {
     echo "All verifications passed!\n";
     exit(0);
-} else {
-    exit(1);
 }
+exit(1);

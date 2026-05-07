@@ -20,7 +20,7 @@ class SendEmailRequest
     public function toArray(): array
     {
         $result = [
-            'templateKey' => $this->templateKey,
+            'templateKey' => trim($this->templateKey),
             'recipient' => $this->serializeRecipient($this->recipient),
             'data' => $this->data,
         ];
