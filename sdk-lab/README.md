@@ -1,22 +1,26 @@
 # Huefy PHP SDK Lab
 
-A standalone verification runner that exercises core SDK infrastructure.
+Verifies the core email contract through the real `HuefyEmailClient` without sending live email.
 
 ## Run
 
 ```bash
-composer lab
-# or directly:
 php sdk-lab/run.php
 ```
 
+from `sdks/php/`.
+
 ## Scenarios
 
-1. Initialization — create client with dummy key, no exception
-2. Config validation — empty API key throws
-3. HMAC signing — 64-char hex signature
-4. Error sanitization — IP and email redacted
-5. PII detection — email/ssn identified
-6. Circuit breaker state — new breaker starts closed
-7. Health check — invoke `GET /health` against the configured base URL
-8. Cleanup — close client, no exception
+1. Initialization
+2. Single email contract
+3. Bulk email contract
+4. Validation rejects invalid single recipient
+5. Validation rejects invalid bulk request
+6. Health check path
+7. Cleanup
+
+## Notes
+
+- The lab uses an inline stub client rather than the live API.
+- It checks serialized request bodies, typed response parsing, and validation boundaries.
