@@ -56,6 +56,137 @@ function fail(string $label, string $reason): void
     echo RED . '[FAIL]' . RESET . " {$label} — {$reason}\n";
 }
 
+function is_live_mode(): bool
+{
+    return strtolower((string) getenv('HUEFY_SDK_LAB_MODE')) === 'live';
+}
+
+function require_env(string $name): string
+{
+    $value = getenv($name);
+    if ($value === false || trim($value) === '') {
+        throw new RuntimeException("{$name} is required in live mode");
+    }
+
+    return trim($value);
+}
+
+function live_provider(): ?string
+{
+    $provider = strtolower(trim((string) getenv('HUEFY_SDK_LIVE_PROVIDER')));
+    return match ($provider) {
+        'sendgrid', 'ses', 'mailgun' => $provider,
+        default => null,
+    };
+}
+
+function print_summary(int $passed, int $failed): never
+{
+    echo "\n";
+    echo "========================================\n";
+    echo "Results: {$passed} passed, {$failed} failed\n";
+    echo "========================================\n\n";
+
+    if ($failed === 0) {
+        echo "All verifications passed!\n";
+        exit(0);
+    }
+
+    exit(1);
+}
+
+if (is_live_mode()) {
+    echo "=== Huefy PHP SDK Lab ===\n\n";
+
+    $client = null;
+    try {
+        $client = new HuefyEmailClient([
+            'apiKey' => require_env('HUEFY_SDK_LIVE_API_KEY'),
+            'baseUrl' => require_env('HUEFY_SDK_LIVE_BASE_URL'),
+            'timeout' => 10_000,
+        ]);
+        pass('Initialization');
+    } catch (Throwable $e) {
+        fail('Initialization', $e->getMessage());
+    }
+
+    if ($client instanceof HuefyEmailClient) {
+        $recipient = require_env('HUEFY_SDK_LIVE_RECIPIENT');
+        $templateKey = require_env('HUEFY_SDK_LIVE_TEMPLATE_KEY');
+        $provider = live_provider();
+
+        try {
+            $response = $client->sendEmail(new SendEmailRequest(
+                templateKey: $templateKey,
+                data: ['FirstName' => 'SDK Live'],
+                recipient: $recipient,
+                provider: $provider,
+            ));
+            ($response instanceof SendEmailResponse && $response->success)
+                ? pass('Single email live behavior')
+                : fail('Single email live behavior', 'expected successful live send');
+        } catch (Throwable $e) {
+            fail('Single email live behavior', $e->getMessage());
+        }
+
+        try {
+            $response = $client->sendBulkEmails(new SendBulkEmailsRequest(
+                templateKey: $templateKey,
+                recipients: [new BulkRecipient(email: $recipient, type: 'TO')],
+                provider: $provider,
+            ));
+            ($response instanceof SendBulkEmailsResponse && $response->success && $response->data->totalRecipients >= 1)
+                ? pass('Bulk email live behavior')
+                : fail('Bulk email live behavior', 'expected successful live bulk send');
+        } catch (Throwable $e) {
+            fail('Bulk email live behavior', $e->getMessage());
+        }
+
+        try {
+            $client->sendEmail(new SendEmailRequest(
+                templateKey: $templateKey,
+                data: ['FirstName' => 'SDK Live'],
+                recipient: new SendEmailRecipient(email: 'not-an-email', type: 'reply-to'),
+            ));
+            fail('Validation rejects invalid single recipient', 'Expected validation error');
+        } catch (HuefyException) {
+            pass('Validation rejects invalid single recipient');
+        } catch (Throwable $e) {
+            fail('Validation rejects invalid single recipient', $e->getMessage());
+        }
+
+        try {
+            $client->sendBulkEmails(new SendBulkEmailsRequest(
+                templateKey: $templateKey,
+                recipients: [new BulkRecipient(email: 'bad-email', type: 'reply-to')],
+            ));
+            fail('Validation rejects invalid bulk request', 'Expected validation error');
+        } catch (HuefyException) {
+            pass('Validation rejects invalid bulk request');
+        } catch (Throwable $e) {
+            fail('Validation rejects invalid bulk request', $e->getMessage());
+        }
+
+        try {
+            $response = $client->emailHealthCheck();
+            ($response instanceof HealthResponse && $response->status === 'healthy')
+                ? pass('Health check path')
+                : fail('Health check path', 'expected healthy live response');
+        } catch (Throwable $e) {
+            fail('Health check path', $e->getMessage());
+        }
+
+        try {
+            $client->close();
+            pass('Cleanup');
+        } catch (Throwable $e) {
+            fail('Cleanup', $e->getMessage());
+        }
+    }
+
+    print_summary($passed, $failed);
+}
+
 final class LabEmailClient extends HuefyEmailClient
 {
     /** @var list<array<string, mixed>> */
@@ -262,13 +393,4 @@ try {
     fail('Cleanup', $e->getMessage());
 }
 
-echo "\n";
-echo "========================================\n";
-echo "Results: {$passed} passed, {$failed} failed\n";
-echo "========================================\n\n";
-
-if ($failed === 0) {
-    echo "All verifications passed!\n";
-    exit(0);
-}
-exit(1);
+print_summary($passed, $failed);

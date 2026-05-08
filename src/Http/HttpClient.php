@@ -31,8 +31,9 @@ class HttpClient
     public function __construct(HuefyConfig $config)
     {
         $this->config = $config;
+        $baseUri = rtrim($config->resolvedBaseUrl(), '/') . '/';
         $this->client = new Client([
-            'base_uri' => $config->resolvedBaseUrl(),
+            'base_uri' => $baseUri,
             'timeout' => $config->timeout / 1000.0,
             'http_errors' => false,
         ]);
