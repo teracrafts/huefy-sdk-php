@@ -2,7 +2,28 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../vendor/autoload.php';
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require_once __DIR__ . '/../vendor/autoload.php';
+} else {
+    spl_autoload_register(static function (string $class): void {
+        $prefix = 'Teracrafts\\Huefy\\';
+        if (!str_starts_with($class, $prefix)) {
+            return;
+        }
+
+        $relative = substr($class, strlen($prefix));
+        if ($relative === false) {
+            return;
+        }
+
+        $path = __DIR__ . '/../src/' . str_replace('\\', '/', $relative) . '.php';
+        if (file_exists($path)) {
+            require_once $path;
+        }
+    });
+
+    require_once __DIR__ . '/../src/legacy_aliases.php';
+}
 
 use Teracrafts\Huefy\Errors\HuefyException;
 use Teracrafts\Huefy\HuefyEmailClient;
@@ -42,6 +63,13 @@ final class LabEmailClient extends HuefyEmailClient
     /** @var list<array{method:string,path:string,body:?array}> */
     public array $calls = [];
 
+    public function __construct(array $config = [])
+    {
+        // The lab exercises request shaping and validation, so it does not need
+        // the production HTTP transport or Composer-installed dependencies.
+        $this->calls = [];
+    }
+
     /**
      * @param list<array<string, mixed>> $responses
      */
@@ -58,6 +86,11 @@ final class LabEmailClient extends HuefyEmailClient
             throw new \RuntimeException('No queued response');
         }
         return array_shift($this->responses);
+    }
+
+    public function close(): void
+    {
+        // No transport resources are allocated in the lab harness.
     }
 }
 
