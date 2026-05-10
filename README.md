@@ -135,7 +135,7 @@ if (($health['data']['status'] ?? null) !== 'healthy') {
 
 ## Local Development
 
-The PHP SDK does not resolve `HUEFY_MODE` automatically. To match the local Caddy setup, set `baseUrl` to `https://api.huefy.on/api/v1/sdk`. To bypass Caddy and hit the raw app port directly, use `http://localhost:8080/api/v1/sdk` instead:
+The PHP SDK does not resolve `HUEFY_MODE` automatically. To match the local Caddy setup, set `baseUrl` to `https://api.huefy.on/api/v1/sdk`. To bypass Caddy and hit the raw app port directly, use `http://localhost:3140/api/v1/sdk` instead:
 
 ```php
 $client = new HuefyEmailClient([
