@@ -190,6 +190,12 @@ class HuefyException extends \RuntimeException
                 statusCode: 404,
                 recoverable: false,
             ),
+            $statusCode === 402 => new self(
+                message: $message,
+                errorCode: ErrorCode::INSUFFICIENT_QUOTA,
+                statusCode: 402,
+                recoverable: false,
+            ),
             $statusCode === 429 => self::rateLimitError($retryAfterMs),
             $statusCode >= 500 && $statusCode <= 599 => self::serverError($message, $statusCode),
             default => new self(

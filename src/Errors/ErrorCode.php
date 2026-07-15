@@ -19,6 +19,7 @@ class ErrorCode
     public const NOT_FOUND_ERROR = 'NOT_FOUND_ERROR';
     public const VALIDATION_ERROR = 'VALIDATION_ERROR';
     public const RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR';
+    public const INSUFFICIENT_QUOTA = 'INSUFFICIENT_QUOTA';
     public const SERVER_ERROR = 'SERVER_ERROR';
     public const CIRCUIT_BREAKER_OPEN = 'CIRCUIT_BREAKER_OPEN';
     public const SIGNING_ERROR = 'SIGNING_ERROR';
@@ -38,6 +39,7 @@ class ErrorCode
         self::NOT_FOUND_ERROR => 2003,
         self::VALIDATION_ERROR => 3001,
         self::RATE_LIMIT_ERROR => 3002,
+        self::INSUFFICIENT_QUOTA => 3003,
         self::SERVER_ERROR => 4001,
         self::CIRCUIT_BREAKER_OPEN => 5001,
         self::SIGNING_ERROR => 6001,
