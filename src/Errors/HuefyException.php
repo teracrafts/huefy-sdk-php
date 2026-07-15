@@ -176,6 +176,21 @@ class HuefyException extends \RuntimeException
 
     public static function fromStatusCode(int $statusCode, string $message, ?string $requestId = null, ?int $retryAfterMs = null): self
     {
+        if (self::hasInsufficientQuotaCode($message)) {
+            $exception = new self(
+                message: $message,
+                errorCode: ErrorCode::INSUFFICIENT_QUOTA,
+                statusCode: $statusCode,
+                recoverable: false,
+            );
+
+            if ($requestId !== null) {
+                $exception->setRequestId($requestId);
+            }
+
+            return $exception;
+        }
+
         $exception = match (true) {
             $statusCode === 401 => self::authenticationError($message),
             $statusCode === 403 => new self(
@@ -211,5 +226,14 @@ class HuefyException extends \RuntimeException
         }
 
         return $exception;
+    }
+
+    private static function hasInsufficientQuotaCode(string $message): bool
+    {
+        /** @var mixed $payload */
+        $payload = json_decode($message, true);
+
+        return is_array($payload)
+            && ($payload['code'] ?? null) === ErrorCode::INSUFFICIENT_QUOTA;
     }
 }

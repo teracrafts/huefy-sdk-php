@@ -103,6 +103,8 @@ try {
 } catch (HuefyException $e) {
     if ($e->getErrorCode() === ErrorCode::AUTHENTICATION_ERROR) {
         echo 'Invalid API key' . PHP_EOL;
+    } elseif ($e->getErrorCode() === ErrorCode::INSUFFICIENT_QUOTA) {
+        echo 'Quota exhausted. Upgrade or wait for the next billing period' . PHP_EOL;
     } elseif ($e->getErrorCode() === ErrorCode::RATE_LIMIT_ERROR) {
         echo 'Rate limited' . PHP_EOL;
     } elseif ($e->getErrorCode() === ErrorCode::CIRCUIT_BREAKER_OPEN) {
@@ -119,6 +121,7 @@ try {
 |-----------|------|---------|
 | `HuefyInitException` | 1001 | Client failed to initialise |
 | `HuefyAuthException` | 1102 | API key rejected |
+| `HuefyException` | `INSUFFICIENT_QUOTA` | Account or organization quota exhausted |
 | `HuefyNetworkException` | 1201 | Upstream request failed |
 | `HuefyCircuitOpenException` | 1301 | Circuit breaker tripped |
 | `HuefyRateLimitException` | 2003 | Rate limit exceeded |

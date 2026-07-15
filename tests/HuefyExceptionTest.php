@@ -23,4 +23,18 @@ final class HuefyExceptionTest extends TestCase
         self::assertFalse($error->isRecoverable());
         self::assertStringContainsString('Quota exceeded', $error->getMessage());
     }
+
+    public function testMapsQuotaPayloadBeforeStatusDerivedError(): void
+    {
+        $error = HuefyException::fromStatusCode(
+            500,
+            '{"error":"Quota exceeded","code":"INSUFFICIENT_QUOTA"}',
+            'req_456',
+        );
+
+        self::assertSame(ErrorCode::INSUFFICIENT_QUOTA, $error->getErrorCode());
+        self::assertSame(500, $error->getStatusCode());
+        self::assertSame('req_456', $error->getRequestId());
+        self::assertFalse($error->isRecoverable());
+    }
 }
