@@ -10,6 +10,7 @@ use Teracrafts\Huefy\Models\BulkRecipient;
 use Teracrafts\Huefy\Models\SendBulkEmailsRequest;
 use Teracrafts\Huefy\Models\SendEmailRequest;
 use Teracrafts\Huefy\Models\SendEmailRecipient;
+use Teracrafts\Huefy\Models\ValidateTemplateRequest;
 use PHPUnit\Framework\TestCase;
 
 class HuefyEmailClientTest extends TestCase
@@ -20,6 +21,8 @@ class HuefyEmailClientTest extends TestCase
         self::assertTrue(class_exists(\Huefy\HuefyConfig::class));
         self::assertTrue(class_exists(\Huefy\RateLimitInfo::class));
         self::assertTrue(class_exists(\Huefy\Models\EmailProvider::class));
+        self::assertTrue(class_exists(\Huefy\Models\ValidateTemplateRequest::class));
+        self::assertTrue(class_exists(\Huefy\Models\ValidateTemplateResponse::class));
     }
 
     // --- sendEmail validation ---
@@ -214,6 +217,64 @@ class HuefyEmailClientTest extends TestCase
         $this->assertSame(2, $response->data->totalRecipients);
         $this->assertSame(2, $response->data->successCount);
         $this->assertCount(2, $response->data->recipients);
+    }
+
+    // --- validateTemplate validation ---
+
+    public function testValidateTemplateSucceeds(): void
+    {
+        $responseData = [
+            'success' => true,
+            'correlationId' => 'corr-validate',
+            'data' => [
+                'isValid' => true,
+                'errors' => [],
+                'warnings' => [],
+                'variables' => ['firstName'],
+                'validatedAt' => '2026-07-25T18:00:00Z',
+            ],
+        ];
+
+        $client = $this->getMockBuilder(HuefyEmailClient::class)
+            ->setConstructorArgs([['apiKey' => 'sdk_test_key']])
+            ->onlyMethods(['request'])
+            ->getMock();
+
+        $client->expects($this->once())
+            ->method('request')
+            ->with(
+                'POST',
+                '/emails/validate-template',
+                [
+                    'templateKey' => 'welcome',
+                    'templateVersion' => 3,
+                    'testData' => ['firstName' => 'Ada'],
+                    'correlationId' => 'corr-validate',
+                ],
+            )
+            ->willReturn($responseData);
+
+        $response = $client->validateTemplate(new ValidateTemplateRequest(
+            templateKey: ' welcome ',
+            templateVersion: 3,
+            testData: ['firstName' => 'Ada'],
+            correlationId: 'corr-validate',
+        ));
+
+        $this->assertTrue($response->success);
+        $this->assertTrue($response->data->isValid);
+        $this->assertSame(['firstName'], $response->data->variables);
+        $this->assertSame('corr-validate', $response->correlationId);
+    }
+
+    public function testValidateTemplateThrowsOnBlankTemplateKey(): void
+    {
+        $client = $this->makeClient();
+
+        $this->expectException(HuefyException::class);
+        $this->expectExceptionMessageMatches('/Template key/');
+
+        $client->validateTemplate(new ValidateTemplateRequest(templateKey: '   '));
     }
 
     // --- helpers ---

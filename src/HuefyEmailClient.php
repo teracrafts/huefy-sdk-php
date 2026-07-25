@@ -12,6 +12,8 @@ use Teracrafts\Huefy\Models\SendBulkEmailsRequest;
 use Teracrafts\Huefy\Models\SendEmailRequest;
 use Teracrafts\Huefy\Models\SendEmailResponse;
 use Teracrafts\Huefy\Models\SendBulkEmailsResponse;
+use Teracrafts\Huefy\Models\ValidateTemplateRequest;
+use Teracrafts\Huefy\Models\ValidateTemplateResponse;
 use Teracrafts\Huefy\Security\Security;
 use Teracrafts\Huefy\Validators\EmailValidators;
 
@@ -34,6 +36,7 @@ class HuefyEmailClient extends HuefyClient
 {
     private const SEND_EMAIL_PATH = '/emails/send';
     private const SEND_BULK_EMAIL_PATH = '/emails/send-bulk';
+    private const VALIDATE_TEMPLATE_PATH = '/emails/validate-template';
     private const HEALTH_PATH = '/health';
 
     /**
@@ -129,6 +132,45 @@ class HuefyEmailClient extends HuefyClient
         $response = $this->request('POST', self::SEND_BULK_EMAIL_PATH, $body);
 
         return SendBulkEmailsResponse::fromArray($response);
+    }
+
+    /**
+     * Validates a template and optional test data without sending an email.
+     *
+     * @param ValidateTemplateRequest $request The template validation request object.
+     *
+     * @return ValidateTemplateResponse
+     *
+     * @throws HuefyException If validation fails or the request fails.
+     */
+    public function validateTemplate(ValidateTemplateRequest $request): ValidateTemplateResponse
+    {
+        $templateError = EmailValidators::validateTemplateKey($request->templateKey);
+        if ($templateError !== null) {
+            throw HuefyException::validationError($templateError);
+        }
+
+        if ($request->testData !== null) {
+            $dataJson = json_encode($request->testData);
+            if ($dataJson !== false) {
+                $piiTypes = Security::detectPii($dataJson);
+                if (!empty($piiTypes)) {
+                    trigger_error(
+                        sprintf(
+                            'Potential PII detected in template validation data. Types: [%s]. '
+                            . 'Please review whether this data should be transmitted and ensure '
+                            . 'compliance with your data protection policies.',
+                            implode(', ', $piiTypes),
+                        ),
+                        E_USER_WARNING,
+                    );
+                }
+            }
+        }
+
+        $response = $this->request('POST', self::VALIDATE_TEMPLATE_PATH, $request->toArray());
+
+        return ValidateTemplateResponse::fromArray($response);
     }
 
     /**
